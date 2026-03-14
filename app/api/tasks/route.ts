@@ -100,13 +100,13 @@ export async function POST(request: Request) {
     typeof payload?.description === "string"
       ? payload.description.trim()
       : "";
-  const status =
+  const status: "TODO" | "IN_PROGRESS" | "DONE" =
     typeof payload?.status === "string" && TASK_STATUSES.has(payload.status)
-      ? payload.status
+      ? (payload.status as "TODO" | "IN_PROGRESS" | "DONE")
       : "TODO";
-  const priority =
+  const priority: "LOW" | "MEDIUM" | "HIGH" =
     typeof payload?.priority === "string" && TASK_PRIORITIES.has(payload.priority)
-      ? payload.priority
+      ? (payload.priority as "LOW" | "MEDIUM" | "HIGH")
       : "MEDIUM";
   const dueDate = parseDueDate(payload?.dueDate ?? null);
 
