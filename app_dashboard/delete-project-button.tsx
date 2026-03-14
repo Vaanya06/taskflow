@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -20,7 +20,6 @@ export default function DeleteProjectButton({
     const confirmed = window.confirm(
       `Delete "${projectTitle}"? This cannot be undone.`,
     );
-
     if (!confirmed) {
       return;
     }
@@ -42,16 +41,16 @@ export default function DeleteProjectButton({
   };
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex flex-col items-end gap-1">
       <button
-        className="h-9 rounded-full border border-zinc-200 px-4 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-70"
         type="button"
         onClick={handleDelete}
         disabled={isPending}
+        className="flex h-7 items-center rounded-lg border border-red-500/20 bg-red-500/5 px-3 text-xs font-medium text-red-400/60 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
       >
-        {isPending ? "Deleting" : "Delete"}
+        {isPending ? "..." : "Delete"}
       </button>
-      {error ? <span className="text-xs text-red-600">{error}</span> : null}
+      {error ? <span className="text-[10px] text-red-400">{error}</span> : null}
     </div>
   );
 }

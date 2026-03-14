@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -65,48 +65,48 @@ export default function NewTaskForm({ projectId, onNotify }: NewTaskFormProps) {
 
   return (
     <form
-      className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
+      className="flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-[#1a1d27] p-6"
       onSubmit={handleSubmit}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-zinc-900">New Task</h3>
-          <p className="text-sm text-zinc-500">
+          <h3 className="text-base font-semibold text-white/85">New Task</h3>
+          <p className="text-sm text-white/35">
             Add a task to this project and keep it moving.
           </p>
         </div>
         <button
-          className="h-10 rounded-full bg-zinc-900 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex h-8 items-center rounded-lg bg-indigo-500 px-4 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-70"
           type="submit"
           disabled={isPending}
         >
           {isPending ? "Creating..." : "+ New Task"}
         </button>
       </div>
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+      <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
         Title
         <input
-          className="h-11 rounded-xl border border-zinc-200 px-4 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+          className="h-10 rounded-lg border border-white/10 bg-white/5 px-4 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
           name="title"
           type="text"
           placeholder="Draft onboarding checklist"
           required
         />
       </label>
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+      <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
         Description
         <textarea
-          className="min-h-[96px] rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+          className="min-h-[96px] rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
           name="description"
           placeholder="Optional context or notes"
           rows={3}
         />
       </label>
       <div className="grid gap-4 md:grid-cols-3">
-        <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+        <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
           Status
           <select
-            className="h-11 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+            className="h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
             name="status"
             defaultValue="TODO"
           >
@@ -115,10 +115,10 @@ export default function NewTaskForm({ projectId, onNotify }: NewTaskFormProps) {
             <option value="DONE">Done</option>
           </select>
         </label>
-        <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+        <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
           Priority
           <select
-            className="h-11 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+            className="h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
             name="priority"
             defaultValue="MEDIUM"
           >
@@ -127,17 +127,17 @@ export default function NewTaskForm({ projectId, onNotify }: NewTaskFormProps) {
             <option value="HIGH">High</option>
           </select>
         </label>
-        <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+        <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
           Due date
           <input
-            className="h-11 rounded-xl border border-zinc-200 px-3 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+            className="h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
             name="dueDate"
             type="date"
           />
         </label>
       </div>
       {error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
           {error}
         </p>
       ) : null}

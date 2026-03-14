@@ -1,0 +1,66 @@
+<svg width="960" height="720" viewBox="0 0 960 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="focusBg" x1="62" y1="36" x2="854" y2="664" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18324D"/>
+      <stop offset="1" stop-color="#0B1627"/>
+    </linearGradient>
+    <linearGradient id="focusPanel" x1="618" y1="172" x2="865" y2="561" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2F8FF"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <filter id="focusShadow" x="0" y="0" width="960" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="18"/>
+      <feGaussianBlur stdDeviation="22"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0196078 0 0 0 0 0.0470588 0 0 0 0 0.0901961 0 0 0 0.24 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_2"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_2" result="shape"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#focusShadow)">
+    <rect x="48" y="34" width="864" height="596" rx="38" fill="url(#focusBg)"/>
+    <rect x="88" y="76" width="784" height="42" rx="21" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="120" y="89" width="180" height="16" rx="8" fill="#7D91A6"/>
+    <rect x="704" y="86" width="128" height="22" rx="11" fill="#FFFFFF" fill-opacity="0.1"/>
+
+    <rect x="88" y="152" width="484" height="430" rx="30" fill="#111F33"/>
+    <rect x="596" y="152" width="276" height="430" rx="30" fill="url(#focusPanel)"/>
+
+    <text x="120" y="194" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2.5">SEARCH AND FILTER</text>
+    <rect x="120" y="222" width="420" height="48" rx="24" fill="#FFFFFF" fill-opacity="0.08"/>
+    <circle cx="152" cy="246" r="10" fill="#5D7187"/>
+    <rect x="176" y="239" width="188" height="14" rx="7" fill="#7D91A6"/>
+
+    <rect x="120" y="298" width="110" height="32" rx="16" fill="#E6F4FF"/>
+    <rect x="242" y="298" width="118" height="32" rx="16" fill="#FFFFFF" fill-opacity="0.12"/>
+    <rect x="372" y="298" width="92" height="32" rx="16" fill="#FFFFFF" fill-opacity="0.12"/>
+    <rect x="476" y="298" width="64" height="32" rx="16" fill="#FFFFFF" fill-opacity="0.12"/>
+
+    <rect x="120" y="364" width="420" height="70" rx="20" fill="#FFFFFF" fill-opacity="0.06"/>
+    <rect x="120" y="450" width="420" height="70" rx="20" fill="#FFFFFF" fill-opacity="0.06"/>
+    <rect x="140" y="386" width="148" height="10" rx="5" fill="#FFFFFF"/>
+    <rect x="140" y="404" width="110" height="8" rx="4" fill="#7D91A6"/>
+    <rect x="464" y="380" width="52" height="18" rx="9" fill="#5EE4B2"/>
+    <rect x="140" y="472" width="172" height="10" rx="5" fill="#FFFFFF"/>
+    <rect x="140" y="490" width="130" height="8" rx="4" fill="#7D91A6"/>
+    <rect x="442" y="466" width="74" height="18" rx="9" fill="#FBD38D"/>
+
+    <text x="628" y="194" fill="#6B778A" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2.5">ATTENTION PANEL</text>
+    <rect x="628" y="228" width="212" height="100" rx="22" fill="#F5F8FC"/>
+    <rect x="648" y="250" width="92" height="12" rx="6" fill="#102032"/>
+    <rect x="648" y="270" width="138" height="8" rx="4" fill="#D0D9E4"/>
+    <rect x="648" y="294" width="168" height="16" rx="8" fill="#D8F2E1"/>
+
+    <rect x="628" y="350" width="212" height="100" rx="22" fill="#F5F8FC"/>
+    <rect x="648" y="372" width="120" height="12" rx="6" fill="#102032"/>
+    <rect x="648" y="392" width="114" height="8" rx="4" fill="#D0D9E4"/>
+    <rect x="648" y="416" width="150" height="16" rx="8" fill="#FFF0CC"/>
+
+    <rect x="628" y="472" width="212" height="78" rx="22" fill="#0E1B30"/>
+    <rect x="648" y="496" width="104" height="10" rx="5" fill="#FFFFFF"/>
+    <rect x="648" y="514" width="148" height="8" rx="4" fill="#8FA1B5"/>
+  </g>
+</svg>

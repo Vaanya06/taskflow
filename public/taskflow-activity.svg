@@ -1,0 +1,65 @@
+<svg width="960" height="720" viewBox="0 0 960 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="activityBg" x1="72" y1="38" x2="846" y2="676" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF8"/>
+      <stop offset="1" stop-color="#F6F1E7"/>
+    </linearGradient>
+    <linearGradient id="activityAccent" x1="604" y1="146" x2="850" y2="532" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B3B5D"/>
+      <stop offset="1" stop-color="#0D1728"/>
+    </linearGradient>
+    <filter id="activityShadow" x="0" y="0" width="960" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="18"/>
+      <feGaussianBlur stdDeviation="22"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0470588 0 0 0 0 0.0862745 0 0 0 0 0.137255 0 0 0 0.16 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_3"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_3" result="shape"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#activityShadow)">
+    <rect x="48" y="34" width="864" height="596" rx="38" fill="url(#activityBg)"/>
+    <rect x="88" y="76" width="784" height="42" rx="21" fill="#FFFFFF" fill-opacity="0.84"/>
+    <rect x="118" y="89" width="188" height="16" rx="8" fill="#DFE8F1"/>
+    <rect x="708" y="86" width="132" height="22" rx="11" fill="#EEF4FA"/>
+
+    <rect x="88" y="152" width="458" height="430" rx="30" fill="#FFFFFF"/>
+    <rect x="572" y="152" width="300" height="430" rx="30" fill="url(#activityAccent)"/>
+
+    <text x="120" y="194" fill="#6B778A" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2.5">TASK DETAIL</text>
+    <rect x="120" y="224" width="394" height="88" rx="24" fill="#F7F9FC"/>
+    <rect x="148" y="248" width="150" height="12" rx="6" fill="#102032"/>
+    <rect x="148" y="268" width="220" height="8" rx="4" fill="#D0D9E4"/>
+    <rect x="148" y="286" width="180" height="8" rx="4" fill="#D0D9E4"/>
+    <rect x="392" y="246" width="94" height="22" rx="11" fill="#D9F3E2"/>
+
+    <rect x="120" y="340" width="394" height="102" rx="24" fill="#FBFCFE"/>
+    <circle cx="154" cy="376" r="18" fill="#EAF3FB"/>
+    <rect x="186" y="360" width="122" height="10" rx="5" fill="#102032"/>
+    <rect x="186" y="378" width="230" height="8" rx="4" fill="#D0D9E4"/>
+    <rect x="186" y="396" width="198" height="8" rx="4" fill="#D0D9E4"/>
+
+    <circle cx="154" cy="470" r="18" fill="#FDE9CC"/>
+    <rect x="186" y="454" width="148" height="10" rx="5" fill="#102032"/>
+    <rect x="186" y="472" width="216" height="8" rx="4" fill="#D0D9E4"/>
+    <rect x="186" y="490" width="188" height="8" rx="4" fill="#D0D9E4"/>
+
+    <text x="604" y="194" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="15" font-weight="700" letter-spacing="2.5">ACTIVITY FEED</text>
+    <rect x="604" y="228" width="236" height="84" rx="22" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="628" y="252" width="128" height="10" rx="5" fill="#FFFFFF"/>
+    <rect x="628" y="270" width="160" height="8" rx="4" fill="#8FA1B5"/>
+
+    <rect x="604" y="332" width="236" height="84" rx="22" fill="#FFFFFF" fill-opacity="0.08"/>
+    <rect x="628" y="356" width="144" height="10" rx="5" fill="#FFFFFF"/>
+    <rect x="628" y="374" width="182" height="8" rx="4" fill="#8FA1B5"/>
+
+    <rect x="604" y="436" width="236" height="114" rx="22" fill="#FFFFFF" fill-opacity="0.08"/>
+    <text x="628" y="468" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2.5">LABEL STACK</text>
+    <rect x="628" y="486" width="86" height="24" rx="12" fill="#D9F3E2"/>
+    <rect x="724" y="486" width="74" height="24" rx="12" fill="#D8EAFF"/>
+    <rect x="628" y="522" width="130" height="10" rx="5" fill="#FFFFFF"/>
+  </g>
+</svg>

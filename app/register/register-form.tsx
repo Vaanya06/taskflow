@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -38,21 +38,21 @@ export default function RegisterForm() {
   };
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+    <form className="grid gap-4" onSubmit={handleSubmit}>
+      <label className="grid gap-2 text-sm font-medium text-white/45">
         Name
         <input
-          className="h-11 rounded-xl border border-zinc-200 px-4 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+          className="h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
           name="name"
           type="text"
           placeholder="Avery Lane"
           autoComplete="name"
         />
       </label>
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+      <label className="grid gap-2 text-sm font-medium text-white/45">
         Email
         <input
-          className="h-11 rounded-xl border border-zinc-200 px-4 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+          className="h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
           name="email"
           type="email"
           placeholder="you@company.com"
@@ -60,10 +60,10 @@ export default function RegisterForm() {
           autoComplete="email"
         />
       </label>
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+      <label className="grid gap-2 text-sm font-medium text-white/45">
         Password
         <input
-          className="h-11 rounded-xl border border-zinc-200 px-4 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+          className="h-10 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
           name="password"
           type="password"
           placeholder="At least 8 characters"
@@ -73,12 +73,12 @@ export default function RegisterForm() {
         />
       </label>
       {error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">
           {error}
         </p>
       ) : null}
       <button
-        className="mt-2 h-11 rounded-xl bg-zinc-900 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
+        className="mt-2 flex h-10 items-center justify-center rounded-lg bg-indigo-500 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-70"
         type="submit"
         disabled={isPending}
       >

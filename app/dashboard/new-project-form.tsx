@@ -1,12 +1,28 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 export default function NewProjectForm() {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(event: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    if (open) {
+      document.addEventListener("mousedown", handleClick);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -24,14 +40,13 @@ export default function NewProjectForm() {
 
     const response = await fetch("/api/projects", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, description }),
     });
 
     if (response.ok) {
       form.reset();
+      setOpen(false);
       startTransition(() => {
         router.refresh();
       });
@@ -43,49 +58,79 @@ export default function NewProjectForm() {
   };
 
   return (
-    <form
-      className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm"
-      onSubmit={handleSubmit}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-zinc-900">New Project</h3>
-          <p className="text-sm text-zinc-500">
-            Create a workspace to organize tasks and collaborators.
-          </p>
+    <div className="relative" ref={panelRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex h-8 items-center gap-1.5 rounded-lg bg-indigo-500 px-4 text-xs font-semibold text-white transition hover:bg-indigo-400"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M5 1v8M1 5h8" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+        New project
+      </button>
+
+      {open ? (
+        <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1a1d27] shadow-2xl shadow-black/50">
+          <div className="border-b border-white/[0.07] px-4 py-3">
+            <p className="text-xs font-semibold text-white/70">New project</p>
+            <p className="mt-0.5 text-[11px] text-white/30">
+              Create a workspace to organize tasks.
+            </p>
+          </div>
+
+          <form className="flex flex-col gap-3 p-4" onSubmit={handleSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium text-white/40">
+                Project name
+              </label>
+              <input
+                className="h-9 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
+                name="title"
+                type="text"
+                placeholder="Launch marketing site"
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium text-white/40">
+                Description
+              </label>
+              <textarea
+                className="min-h-[72px] resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
+                name="description"
+                placeholder="Optional details"
+                rows={3}
+              />
+            </div>
+
+            {error ? (
+              <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                {error}
+              </p>
+            ) : null}
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="flex h-8 items-center rounded-lg border border-white/10 px-3 text-xs text-white/40 transition hover:text-white/70"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isPending}
+                className="flex h-8 items-center rounded-lg bg-indigo-500 px-4 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:opacity-50"
+              >
+                {isPending ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </form>
         </div>
-        <button
-          className="h-10 rounded-full bg-zinc-900 px-5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-70"
-          type="submit"
-          disabled={isPending}
-        >
-          {isPending ? "Creating..." : "+ New Project"}
-        </button>
-      </div>
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
-        Project name
-        <input
-          className="h-11 rounded-xl border border-zinc-200 px-4 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
-          name="title"
-          type="text"
-          placeholder="Launch marketing site"
-          required
-        />
-      </label>
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
-        Description
-        <textarea
-          className="min-h-[96px] rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
-          name="description"
-          placeholder="Optional details about the project goals"
-          rows={3}
-        />
-      </label>
-      {error ? (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
       ) : null}
-    </form>
+    </div>
   );
 }

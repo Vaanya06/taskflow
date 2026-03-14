@@ -1,12 +1,14 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import NewTaskForm from "./new-task-form";
 import TaskCard from "./task-card";
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
+type ViewMode = "ALL" | "FOCUS" | "DUE_SOON" | "RECENTLY_UPDATED";
+type SortMode = "UPDATED" | "DUE_ASC" | "PRIORITY" | "TITLE";
 
 type TaskLabel = {
   id: string;
@@ -71,12 +73,32 @@ const PRIORITY_LABELS: Record<TaskPriority, string> = {
   HIGH: "High",
 };
 
+const PRIORITY_WEIGHT: Record<TaskPriority, number> = {
+  HIGH: 0,
+  MEDIUM: 1,
+  LOW: 2,
+};
+
 const DUE_FILTERS = [
   { value: "ALL", label: "All due dates" },
   { value: "OVERDUE", label: "Overdue" },
   { value: "NEXT_7_DAYS", label: "Due in 7 days" },
   { value: "NO_DUE_DATE", label: "No due date" },
 ] as const;
+
+const VIEW_PRESETS = [
+  { value: "ALL" as const, label: "All work" },
+  { value: "FOCUS" as const, label: "Focus" },
+  { value: "DUE_SOON" as const, label: "Due soon" },
+  { value: "RECENTLY_UPDATED" as const, label: "Recently updated" },
+];
+
+const SORT_OPTIONS = [
+  { value: "UPDATED" as const, label: "Recently updated" },
+  { value: "DUE_ASC" as const, label: "Due date" },
+  { value: "PRIORITY" as const, label: "Priority" },
+  { value: "TITLE" as const, label: "Title" },
+];
 
 function formatPercent(value: number) {
   return `${Math.round(value)}%`;
@@ -87,23 +109,92 @@ function startOfToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+function startOfDate(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 function isWithinNextDays(date: Date, days: number) {
   const now = startOfToday();
   const future = new Date(now);
   future.setDate(now.getDate() + days);
-  return date >= now && date <= future;
+  const normalized = startOfDate(date);
+  return normalized >= now && normalized <= future;
 }
 
 function normalize(text: string) {
   return text.trim().toLowerCase();
 }
 
+function getDueDate(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function matchesViewPreset(
+  task: Task,
+  viewMode: ViewMode,
+  today: Date,
+  recentThreshold: Date,
+) {
+  const dueDate = getDueDate(task.dueDate);
+
+  switch (viewMode) {
+    case "FOCUS":
+      return (
+        task.status !== "DONE" &&
+        (task.priority === "HIGH" ||
+          (dueDate !== null && startOfDate(dueDate) < today))
+      );
+    case "DUE_SOON":
+      return (
+        task.status !== "DONE" &&
+        dueDate !== null &&
+        isWithinNextDays(dueDate, 7)
+      );
+    case "RECENTLY_UPDATED":
+      return new Date(task.updatedAt) >= recentThreshold;
+    case "ALL":
+    default:
+      return true;
+  }
+}
+
+function compareDueDates(left: string | null, right: string | null) {
+  const leftDate = getDueDate(left);
+  const rightDate = getDueDate(right);
+
+  if (leftDate && rightDate) {
+    return startOfDate(leftDate).getTime() - startOfDate(rightDate).getTime();
+  }
+
+  if (leftDate) {
+    return -1;
+  }
+
+  if (rightDate) {
+    return 1;
+  }
+
+  return 0;
+}
+
 export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
   const router = useRouter();
+  const notificationIdRef = useRef(0);
   const [query, setQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [dueFilter, setDueFilter] = useState("ALL");
   const [labelFilter, setLabelFilter] = useState("ALL");
+  const [viewMode, setViewMode] = useState<ViewMode>("ALL");
+  const [sortMode, setSortMode] = useState<SortMode>("UPDATED");
   const [hideDone, setHideDone] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
@@ -111,15 +202,19 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
   const [isPending, startTransition] = useTransition();
 
   const labelOptions = Array.from(
-    new Set(
-      tasks.flatMap((task) => task.labels.map((label) => label.name)),
-    ),
+    new Set(tasks.flatMap((task) => task.labels.map((label) => label.name))),
   ).sort((a, b) => a.localeCompare(b));
 
   const normalizedQuery = normalize(query);
   const today = startOfToday();
+  const threeDaysAgo = new Date(today);
+  threeDaysAgo.setDate(today.getDate() - 3);
 
   const filteredTasks = tasks.filter((task) => {
+    if (!matchesViewPreset(task, viewMode, today, threeDaysAgo)) {
+      return false;
+    }
+
     if (hideDone && task.status === "DONE") {
       return false;
     }
@@ -136,7 +231,7 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
     }
 
     if (dueFilter !== "ALL") {
-      const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+      const dueDate = getDueDate(task.dueDate);
       if (dueFilter === "NO_DUE_DATE") {
         if (dueDate) {
           return false;
@@ -146,7 +241,7 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
           return false;
         }
 
-        if (dueFilter === "OVERDUE" && dueDate >= today) {
+        if (dueFilter === "OVERDUE" && startOfDate(dueDate) >= today) {
           return false;
         }
 
@@ -171,12 +266,41 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
     return inTitle || inDescription || inLabels;
   });
 
+  const sortedTasks = [...filteredTasks].sort((left, right) => {
+    if (sortMode === "TITLE") {
+      return left.title.localeCompare(right.title);
+    }
+
+    if (sortMode === "DUE_ASC") {
+      const dueDifference = compareDueDates(left.dueDate, right.dueDate);
+      if (dueDifference !== 0) {
+        return dueDifference;
+      }
+
+      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+    }
+
+    if (sortMode === "PRIORITY") {
+      const priorityDifference = PRIORITY_WEIGHT[left.priority] - PRIORITY_WEIGHT[right.priority];
+      if (priorityDifference !== 0) {
+        return priorityDifference;
+      }
+
+      const dueDifference = compareDueDates(left.dueDate, right.dueDate);
+      if (dueDifference !== 0) {
+        return dueDifference;
+      }
+
+      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+    }
+
+    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+  });
+
   const tasksByStatus = {
-    TODO: filteredTasks.filter((task) => task.status === "TODO"),
-    IN_PROGRESS: filteredTasks.filter(
-      (task) => task.status === "IN_PROGRESS",
-    ),
-    DONE: filteredTasks.filter((task) => task.status === "DONE"),
+    TODO: sortedTasks.filter((task) => task.status === "TODO"),
+    IN_PROGRESS: sortedTasks.filter((task) => task.status === "IN_PROGRESS"),
+    DONE: sortedTasks.filter((task) => task.status === "DONE"),
   } as const;
 
   const totalTasks = tasks.length;
@@ -194,18 +318,32 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
   }).length;
 
   const overdueTasks = tasks.filter((task) => {
-    if (!task.dueDate || task.status === "DONE") {
+    const dueDate = getDueDate(task.dueDate);
+    if (!dueDate || task.status === "DONE") {
       return false;
     }
-    const dueDate = new Date(task.dueDate);
-    return dueDate < today;
+    return startOfDate(dueDate) < today;
   }).length;
+
+  const highPriorityTasks = tasks.filter(
+    (task) => task.status !== "DONE" && task.priority === "HIGH",
+  ).length;
+
+  const viewCounts = {
+    ALL: tasks.length,
+    FOCUS: tasks.filter((task) => matchesViewPreset(task, "FOCUS", today, threeDaysAgo)).length,
+    DUE_SOON: tasks.filter((task) => matchesViewPreset(task, "DUE_SOON", today, threeDaysAgo)).length,
+    RECENTLY_UPDATED: tasks.filter((task) =>
+      matchesViewPreset(task, "RECENTLY_UPDATED", today, threeDaysAgo),
+    ).length,
+  };
 
   const pushNotification = (
     message: string,
     type: NotificationType = "info",
   ) => {
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    notificationIdRef.current += 1;
+    const id = "notification-" + notificationIdRef.current;
     setNotifications((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setNotifications((prev) => prev.filter((item) => item.id !== id));
@@ -262,9 +400,7 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
 
     if (response.ok) {
       pushNotification(
-        `Moved "${draggedTask.title}" to ${COLUMNS.find(
-          (column) => column.status === status,
-        )?.label ?? status}.`,
+        `Moved ${draggedTask.title} to ${COLUMNS.find((column) => column.status === status)?.label ?? status}.`,
         "success",
       );
       startTransition(() => {
@@ -282,63 +418,119 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
     setPriorityFilter("ALL");
     setDueFilter("ALL");
     setLabelFilter("ALL");
+    setViewMode("ALL");
+    setSortMode("UPDATED");
     setHideDone(false);
   };
 
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex flex-col gap-5">
       <NewTaskForm projectId={projectId} onNotify={pushNotification} />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
             Tasks completed
           </p>
-          <p className="mt-2 text-3xl font-semibold text-zinc-900">
+          <p className="mt-2 text-3xl font-semibold text-white/90">
             {completedThisWeek}
           </p>
-          <p className="text-sm text-zinc-500">This week</p>
+          <p className="text-sm text-white/35">This week</p>
         </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+        <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
             Project progress
           </p>
-          <p className="mt-2 text-3xl font-semibold text-zinc-900">
+          <p className="mt-2 text-3xl font-semibold text-white/90">
             {formatPercent(progress)}
           </p>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
+              className="h-full rounded-full bg-indigo-500 transition-all"
               style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
         </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+        <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
             Needs attention
           </p>
-          <p className="mt-2 text-3xl font-semibold text-zinc-900">
+          <p className="mt-2 text-3xl font-semibold text-white/90">
             {overdueTasks}
           </p>
-          <p className="text-sm text-zinc-500">Overdue tasks</p>
+          <p className="text-sm text-white/35">Overdue tasks</p>
+        </div>
+        <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
+            High priority
+          </p>
+          <p className="mt-2 text-3xl font-semibold text-white/90">
+            {highPriorityTasks}
+          </p>
+          <p className="text-sm text-white/35">Open tasks marked high</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+      <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="flex-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
+              Quick views
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {VIEW_PRESETS.map((view) => {
+                const isActive = viewMode === view.value;
+                return (
+                  <button
+                    key={view.value}
+                    type="button"
+                    onClick={() => setViewMode(view.value)}
+                    className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition ${
+                      isActive
+                        ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-200"
+                        : "border-white/10 bg-white/5 text-white/45 hover:border-white/20 hover:text-white/75"
+                    }`}
+                  >
+                    {view.label}
+                    <span className="rounded-full bg-black/20 px-2 py-0.5 text-[10px]">
+                      {viewCounts[view.value]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className="flex w-full max-w-xs flex-col gap-2 text-sm font-medium text-white/55">
+            Sort by
+            <select
+              className="h-11 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as SortMode)}
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
             Search tasks
             <input
-              className="h-11 rounded-xl border border-zinc-200 px-3 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+              className="h-11 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
               placeholder="Search title, notes, labels"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+          <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
             Priority
             <select
-              className="h-11 rounded-xl border border-zinc-200 bg-white px-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+              className="h-11 rounded-lg border border-white/10 bg-white/5 px-2 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
               value={priorityFilter}
               onChange={(event) => setPriorityFilter(event.target.value)}
             >
@@ -348,10 +540,10 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
               <option value="HIGH">{PRIORITY_LABELS.HIGH}</option>
             </select>
           </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+          <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
             Due date
             <select
-              className="h-11 rounded-xl border border-zinc-200 bg-white px-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+              className="h-11 rounded-lg border border-white/10 bg-white/5 px-2 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
               value={dueFilter}
               onChange={(event) => setDueFilter(event.target.value)}
             >
@@ -362,10 +554,10 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
+          <label className="flex flex-col gap-2 text-sm font-medium text-white/55">
             Label
             <select
-              className="h-11 rounded-xl border border-zinc-200 bg-white px-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-400"
+              className="h-11 rounded-lg border border-white/10 bg-white/5 px-2 text-sm text-white outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
               value={labelFilter}
               onChange={(event) => setLabelFilter(event.target.value)}
             >
@@ -377,9 +569,9 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-3 text-sm font-medium text-zinc-700">
+          <label className="flex items-center gap-3 pt-8 text-sm font-medium text-white/55">
             <input
-              className="h-4 w-4 rounded border-zinc-300"
+              className="h-4 w-4 rounded border-white/20 bg-white/5"
               type="checkbox"
               checked={hideDone}
               onChange={(event) => setHideDone(event.target.checked)}
@@ -387,12 +579,12 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
             Hide done tasks
           </label>
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-white/30">
           <span>
-            Showing {filteredTasks.length} of {tasks.length} tasks
+            Showing {filteredTasks.length} of {tasks.length} tasks · {SORT_OPTIONS.find((option) => option.value === sortMode)?.label}
           </span>
           <button
-            className="rounded-full border border-zinc-200 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-700"
+            className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:border-white/20 hover:text-white/70"
             type="button"
             onClick={handleClearFilters}
           >
@@ -401,29 +593,36 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div id="board" className="grid gap-6 lg:grid-cols-3">
         {COLUMNS.map((column) => {
           const columnTasks = tasksByStatus[column.status];
           const isActiveDrop = dragOverStatus === column.status;
           return (
             <div key={column.status} className="flex flex-col gap-4">
               <div
-                className={`rounded-2xl border bg-white p-4 ${
+                className={`rounded-xl border bg-[#1a1d27] p-4 ${
                   isActiveDrop
-                    ? "border-emerald-200 bg-emerald-50"
-                    : "border-zinc-200"
+                    ? "border-indigo-500/40"
+                    : "border-white/[0.07]"
                 }`}
               >
-                <h2 className="text-base font-semibold text-zinc-900">
-                  {column.label}
-                </h2>
-                <p className="text-sm text-zinc-500">{column.helper}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold text-white/85">
+                      {column.label}
+                    </h2>
+                    <p className="text-sm text-white/35">{column.helper}</p>
+                  </div>
+                  <span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/35">
+                    {columnTasks.length}
+                  </span>
+                </div>
               </div>
               <div
-                className={`flex min-h-[120px] flex-col gap-4 rounded-2xl border border-dashed p-3 transition ${
+                className={`flex min-h-[120px] flex-col gap-4 rounded-xl border border-dashed bg-[#13161f] p-3 transition ${
                   isActiveDrop
-                    ? "border-emerald-200 bg-emerald-50/40"
-                    : "border-zinc-200"
+                    ? "border-indigo-500/40 bg-indigo-500/[0.06]"
+                    : "border-white/[0.08]"
                 }`}
                 onDragOver={(event) => handleDragOver(event, column.status)}
                 onDragLeave={() => setDragOverStatus(null)}
@@ -436,15 +635,13 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
                       draggable
                       onDragStart={(event) => handleDragStart(event, task.id)}
                       onDragEnd={handleDragEnd}
-                      className={
-                        draggingId === task.id ? "opacity-60" : undefined
-                      }
+                      className={draggingId === task.id ? "opacity-60" : undefined}
                     >
                       <TaskCard task={task} onNotify={pushNotification} />
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-6 text-sm text-zinc-500">
+                  <div className="rounded-xl border border-dashed border-white/[0.08] bg-[#1a1d27] p-6 text-sm text-white/25">
                     No tasks here yet. Drag a task to update its status.
                   </div>
                 )}
@@ -459,12 +656,12 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
           {notifications.map((note) => (
             <div
               key={note.id}
-              className={`rounded-2xl border px-4 py-3 text-sm shadow-lg ${
+              className={`rounded-xl border px-4 py-3 text-sm shadow-lg ${
                 note.type === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
                   : note.type === "error"
-                  ? "border-red-200 bg-red-50 text-red-900"
-                  : "border-zinc-200 bg-white text-zinc-800"
+                    ? "border-red-500/20 bg-red-500/10 text-red-300"
+                    : "border-white/[0.08] bg-[#1a1d27] text-white/80"
               }`}
             >
               {note.message}
@@ -473,9 +670,11 @@ export default function TaskBoard({ projectId, tasks }: TaskBoardProps) {
         </div>
       ) : null}
 
-      {isPending ? (
-        <p className="text-xs text-zinc-400">Syncing updates...</p>
-      ) : null}
+      <div id="activity">
+        {isPending ? (
+          <p className="text-xs text-white/25">Syncing updates...</p>
+        ) : null}
+      </div>
     </section>
   );
 }
