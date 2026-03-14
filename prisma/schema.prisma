@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String       @id @default(uuid())
+  name        String?
+  email       String       @unique
+  password    String?
+  avatar      String?
+  createdAt   DateTime     @default(now())
+  comments    Comment[]
+  activities  Activity[]
+  memberships Membership[]
+  projects    Project[]
+  sessions    Session[]
+  tasks       Task[]       @relation("AssignedTasks")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime     @default(now())
+  ownerId     String
+  members     Membership[]
+  owner       User         @relation(fields: [ownerId], references: [id])
+  tasks       Task[]
+  activities  Activity[]
+}
+
+model Task {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus  @default(TODO)
+  priority    Priority    @default(MEDIUM)
+  dueDate     DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  projectId   String
+  assigneeId  String?
+  comments    Comment[]
+  assignee    User?       @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  project     Project     @relation(fields: [projectId], references: [id])
+  labels      TaskLabel[]
+  activities  Activity[]
+}
+
+model Activity {
+  id        String        @id @default(uuid())
+  type      ActivityType
+  message   String
+  createdAt DateTime      @default(now())
+
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+
+  projectId String?
+  project   Project?      @relation(fields: [projectId], references: [id])
+
+  taskId    String?
+  task      Task?         @relation(fields: [taskId], references: [id])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  taskId    String
+  userId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Label {
+  id    String      @id @default(uuid())
+  name  String
+  color String?
+  tasks TaskLabel[]
+}
+
+model TaskLabel {
+  taskId  String
+  labelId String
+  label   Label  @relation(fields: [labelId], references: [id])
+  task    Task   @relation(fields: [taskId], references: [id])
+
+  @@id([taskId, labelId])
+}
+
+model Membership {
+  id        String  @id @default(uuid())
+  role      Role    @default(MEMBER)
+  userId    String
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([userId, projectId])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Role {
+  OWNER
+  MEMBER
+}
+
+enum ActivityType {
+  TASK_CREATED
+  TASK_COMPLETED
+  TASK_COMMENTED
+}
