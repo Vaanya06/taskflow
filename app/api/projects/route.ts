@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import {
-  invalidateProjectsByOwner,
-  listProjectsByOwner,
+  invalidateProjectsForUser,
+  listProjectsForUser,
 } from "@/services/projectService";
 
 type ProjectPayload = {
@@ -21,7 +21,7 @@ export async function GET() {
     );
   }
 
-  const projects = await listProjectsByOwner(user.id);
+  const projects = await listProjectsForUser(user.id);
 
   return NextResponse.json({ ok: true, projects });
 }
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     },
   });
 
-  await invalidateProjectsByOwner(user.id);
+  await invalidateProjectsForUser(user.id);
 
   return NextResponse.json({ ok: true, project }, { status: 201 });
 }

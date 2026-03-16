@@ -5,7 +5,9 @@ import {
   invalidateTasksByProject,
   listTasksByProject,
 } from "@/services/taskService";
+import { accessibleProjectWhere } from "@/project-access";
 
+const ISSUE_TYPES = new Set(["EPIC", "STORY", "TASK", "BUG"]);
 const TASK_STATUSES = new Set(["TODO", "IN_PROGRESS", "DONE"]);
 const TASK_PRIORITIES = new Set(["LOW", "MEDIUM", "HIGH"]);
 
@@ -13,9 +15,13 @@ type TaskPayload = {
   projectId?: string;
   title?: string;
   description?: string;
+  issueType?: string;
   status?: string;
   priority?: string;
+  storyPoints?: number | string | null;
   dueDate?: string | null;
+  assigneeId?: string | null;
+  sprintId?: string | null;
 };
 
 function parseDueDate(value: unknown): Date | null {
@@ -31,6 +37,28 @@ function parseDueDate(value: unknown): Date | null {
   const parsed = new Date(trimmed);
   if (Number.isNaN(parsed.getTime())) {
     return null;
+  }
+
+  return parsed;
+}
+
+function parseNullableId(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function parseStoryPoints(value: unknown): number | null | undefined {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = typeof value === "number" ? value : Number.parseInt(String(value), 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    return undefined;
   }
 
   return parsed;
@@ -58,7 +86,7 @@ export async function GET(request: Request) {
   const project = await prisma.project.findFirst({
     where: {
       id: projectId,
-      ownerId: user.id,
+      ...accessibleProjectWhere(user.id),
     },
     select: {
       id: true,
@@ -93,13 +121,13 @@ export async function POST(request: Request) {
     payload = null;
   }
 
-  const projectId =
-    typeof payload?.projectId === "string" ? payload.projectId : "";
+  const projectId = typeof payload?.projectId === "string" ? payload.projectId : "";
   const title = typeof payload?.title === "string" ? payload.title.trim() : "";
-  const description =
-    typeof payload?.description === "string"
-      ? payload.description.trim()
-      : "";
+  const description = typeof payload?.description === "string" ? payload.description.trim() : "";
+  const issueType: "EPIC" | "STORY" | "TASK" | "BUG" =
+    typeof payload?.issueType === "string" && ISSUE_TYPES.has(payload.issueType)
+      ? (payload.issueType as "EPIC" | "STORY" | "TASK" | "BUG")
+      : "TASK";
   const status: "TODO" | "IN_PROGRESS" | "DONE" =
     typeof payload?.status === "string" && TASK_STATUSES.has(payload.status)
       ? (payload.status as "TODO" | "IN_PROGRESS" | "DONE")
@@ -108,7 +136,10 @@ export async function POST(request: Request) {
     typeof payload?.priority === "string" && TASK_PRIORITIES.has(payload.priority)
       ? (payload.priority as "LOW" | "MEDIUM" | "HIGH")
       : "MEDIUM";
+  const storyPoints = parseStoryPoints(payload?.storyPoints ?? null);
   const dueDate = parseDueDate(payload?.dueDate ?? null);
+  const assigneeId = parseNullableId(payload?.assigneeId ?? null);
+  const sprintId = parseNullableId(payload?.sprintId ?? null);
 
   if (!projectId) {
     return NextResponse.json(
@@ -124,13 +155,26 @@ export async function POST(request: Request) {
     );
   }
 
+  if (storyPoints === undefined) {
+    return NextResponse.json(
+      { ok: false, error: "Story points must be a whole number between 1 and 100." },
+      { status: 400 },
+    );
+  }
+
   const project = await prisma.project.findFirst({
     where: {
       id: projectId,
-      ownerId: user.id,
+      ...accessibleProjectWhere(user.id),
     },
     select: {
       id: true,
+      ownerId: true,
+      members: {
+        select: {
+          userId: true,
+        },
+      },
     },
   });
 
@@ -141,32 +185,83 @@ export async function POST(request: Request) {
     );
   }
 
+  const collaboratorIds = new Set([
+    project.ownerId,
+    ...project.members.map((member) => member.userId),
+  ]);
+
+  if (assigneeId && !collaboratorIds.has(assigneeId)) {
+    return NextResponse.json(
+      { ok: false, error: "Assignee must be part of this project." },
+      { status: 400 },
+    );
+  }
+
+  if (sprintId) {
+    const sprint = await prisma.sprint.findFirst({
+      where: {
+        id: sprintId,
+        projectId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!sprint) {
+      return NextResponse.json(
+        { ok: false, error: "Sprint not found for this project." },
+        { status: 400 },
+      );
+    }
+  }
+
   const task = await prisma.$transaction(async (tx) => {
     const createdTask = await tx.task.create({
       data: {
         title,
         description: description || null,
+        issueType,
         status,
         priority,
+        storyPoints,
         dueDate,
         projectId,
+        assigneeId,
+        sprintId,
       },
       select: {
         id: true,
         title: true,
         description: true,
+        issueType: true,
         status: true,
         priority: true,
+        storyPoints: true,
         dueDate: true,
         createdAt: true,
         updatedAt: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        sprint: {
+          select: {
+            id: true,
+            title: true,
+            isActive: true,
+          },
+        },
       },
     });
 
     await tx.activity.create({
       data: {
         type: "TASK_CREATED",
-        message: `created task "${createdTask.title}"`,
+        message: `created ${createdTask.issueType.toLowerCase()} \"${createdTask.title}\"`,
         userId: user.id,
         projectId,
         taskId: createdTask.id,

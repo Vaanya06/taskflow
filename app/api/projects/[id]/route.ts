@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
-import { invalidateProjectsByOwner } from "@/services/projectService";
+import { invalidateProjectsForUser } from "@/services/projectService";
+import { accessibleProjectWhere } from "@/project-access";
 
 type RouteContext = {
   params: Promise<{
@@ -30,6 +31,36 @@ export async function DELETE(
     );
   }
 
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      ...accessibleProjectWhere(user.id),
+    },
+    select: {
+      id: true,
+      ownerId: true,
+      members: {
+        select: {
+          userId: true,
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    return NextResponse.json(
+      { ok: false, error: "Project not found." },
+      { status: 404 },
+    );
+  }
+
+  if (project.ownerId !== user.id) {
+    return NextResponse.json(
+      { ok: false, error: "Only the project owner can delete this project." },
+      { status: 403 },
+    );
+  }
+
   try {
     const result = await prisma.project.deleteMany({
       where: {
@@ -45,7 +76,16 @@ export async function DELETE(
       );
     }
 
-    await invalidateProjectsByOwner(user.id);
+    const userIdsToInvalidate = new Set([
+      user.id,
+      ...project.members.map((member) => member.userId),
+    ]);
+
+    await Promise.all(
+      Array.from(userIdsToInvalidate).map((userId) =>
+        invalidateProjectsForUser(userId),
+      ),
+    );
 
     return NextResponse.json({ ok: true });
   } catch (error) {
@@ -67,5 +107,3 @@ export async function DELETE(
     );
   }
 }
-
-

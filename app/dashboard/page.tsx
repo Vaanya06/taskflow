@@ -1,8 +1,9 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { accessibleProjectWhere } from "@/project-access";
 import DeleteProjectButton from "./delete-project-button";
 import LogoutButton from "./logout-button";
 import NewProjectForm from "./new-project-form";
@@ -15,6 +16,11 @@ type DashboardTask = {
   dueDate: Date | null;
   updatedAt: Date;
   projectId: string;
+  assignee: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
   project: {
     title: string;
   };
@@ -90,6 +96,10 @@ function getCompletion(total: number, done: number) {
   return Math.round((done / total) * 100);
 }
 
+function getPersonLabel(person: { name: string | null; email: string }) {
+  return person.name || person.email;
+}
+
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) {
@@ -98,11 +108,30 @@ export default async function DashboardPage() {
 
   const [projects, activities, tasks] = await Promise.all([
     prisma.project.findMany({
-      where: { ownerId: user.id },
+      where: accessibleProjectWhere(user.id),
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        createdAt: true,
+        ownerId: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        members: {
+          select: {
+            userId: true,
+          },
+        },
+      },
     }),
     prisma.activity.findMany({
-      where: { project: { ownerId: user.id } },
+      where: { project: accessibleProjectWhere(user.id) },
       orderBy: { createdAt: "desc" },
       take: 10,
       include: {
@@ -111,9 +140,7 @@ export default async function DashboardPage() {
     }),
     prisma.task.findMany({
       where: {
-        project: {
-          ownerId: user.id,
-        },
+        project: accessibleProjectWhere(user.id),
       },
       select: {
         id: true,
@@ -123,6 +150,13 @@ export default async function DashboardPage() {
         dueDate: true,
         updatedAt: true,
         projectId: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         project: {
           select: {
             title: true,
@@ -152,13 +186,7 @@ export default async function DashboardPage() {
 
     return startOfDate(task.dueDate) < today;
   }).length;
-  const completedThisWeek = allTasks.filter((task) => {
-    if (task.status !== "DONE") {
-      return false;
-    }
-
-    return task.updatedAt >= weekAgo;
-  }).length;
+  const sharedProjects = projects.filter((project) => project.ownerId !== user.id).length;
 
   const tasksByProject = new Map<string, DashboardTask[]>();
   for (const task of allTasks) {
@@ -217,7 +245,7 @@ export default async function DashboardPage() {
               Open tasks
             </p>
             <p className="mt-2 text-3xl font-semibold text-white/90">{openTasks}</p>
-            <p className="text-sm text-white/35">Across all active projects</p>
+            <p className="text-sm text-white/35">Across every workspace you can access</p>
           </div>
           <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
@@ -235,10 +263,10 @@ export default async function DashboardPage() {
           </div>
           <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
-              Completed this week
+              Shared workspaces
             </p>
-            <p className="mt-2 text-3xl font-semibold text-white/90">{completedThisWeek}</p>
-            <p className="text-sm text-white/35">Recently finished work</p>
+            <p className="mt-2 text-3xl font-semibold text-white/90">{sharedProjects}</p>
+            <p className="text-sm text-white/35">Projects you collaborate on as a member</p>
           </div>
         </section>
 
@@ -273,6 +301,8 @@ export default async function DashboardPage() {
                 return isWithinNextDays(task.dueDate, 7);
               }).length;
               const progress = getCompletion(totalProjectTasks, doneProjectTasks);
+              const memberCount = new Set([project.ownerId, ...project.members.map((member) => member.userId)]).size;
+              const isOwner = project.ownerId === user.id;
 
               return (
                 <div
@@ -289,8 +319,14 @@ export default async function DashboardPage() {
                       <p className="truncate text-sm font-medium text-white/80">
                         {project.title}
                       </p>
+                      <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-white/30">
+                        <span className="rounded-full border border-white/10 px-2 py-1">
+                          {isOwner ? "Owner" : `Shared by ${getPersonLabel(project.owner)}`}
+                        </span>
+                        <span>{memberCount} teammates</span>
+                      </div>
                       {project.description ? (
-                        <p className="truncate text-xs text-white/30">
+                        <p className="mt-2 truncate text-xs text-white/30">
                           {project.description}
                         </p>
                       ) : null}
@@ -322,17 +358,19 @@ export default async function DashboardPage() {
                     >
                       Open
                     </Link>
-                    <DeleteProjectButton
-                      projectId={project.id}
-                      projectTitle={project.title}
-                    />
+                    {isOwner ? (
+                      <DeleteProjectButton
+                        projectId={project.id}
+                        projectTitle={project.title}
+                      />
+                    ) : null}
                   </div>
                 </div>
               );
             })
           ) : (
             <div className="px-5 py-12 text-center text-sm text-white/25">
-              No projects yet. Use the button above to create one.
+              No projects yet. Create one or join a shared workspace to get started.
             </div>
           )}
         </section>
@@ -359,6 +397,7 @@ export default async function DashboardPage() {
                       </p>
                       <p className="mt-1 text-xs text-white/30">
                         {task.project.title} · {task.priority.toLowerCase()} priority
+                        {task.assignee ? ` · ${getPersonLabel(task.assignee)}` : " · unassigned"}
                       </p>
                     </div>
                     {task.dueDate ? (

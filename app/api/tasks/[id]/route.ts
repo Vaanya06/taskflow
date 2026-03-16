@@ -2,16 +2,22 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { invalidateTasksByProject } from "@/services/taskService";
+import { accessibleTaskWhere } from "@/project-access";
 
+const ISSUE_TYPES = new Set(["EPIC", "STORY", "TASK", "BUG"]);
 const TASK_STATUSES = new Set(["TODO", "IN_PROGRESS", "DONE"]);
 const TASK_PRIORITIES = new Set(["LOW", "MEDIUM", "HIGH"]);
 
 type TaskUpdatePayload = {
   title?: string;
   description?: string;
+  issueType?: string;
   status?: string;
   priority?: string;
+  storyPoints?: number | string | null;
   dueDate?: string | null;
+  assigneeId?: string | null;
+  sprintId?: string | null;
 };
 
 type RouteContext = {
@@ -42,6 +48,36 @@ function parseDueDate(value: unknown): Date | null | undefined {
   return parsed;
 }
 
+function parseNullableId(value: unknown): string | null | undefined {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function parseStoryPoints(value: unknown): number | null | undefined {
+  if (value === null || value === "") {
+    return null;
+  }
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const parsed = typeof value === "number" ? value : Number.parseInt(String(value), 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
 export async function PATCH(
   request: Request,
   { params }: RouteContext,
@@ -62,9 +98,10 @@ export async function PATCH(
     );
   }
 
-  const task = await prisma.task.findUnique({
+  const task = await prisma.task.findFirst({
     where: {
       id: taskId,
+      ...accessibleTaskWhere(user.id),
     },
     select: {
       id: true,
@@ -74,12 +111,17 @@ export async function PATCH(
       project: {
         select: {
           ownerId: true,
+          members: {
+            select: {
+              userId: true,
+            },
+          },
         },
       },
     },
   });
 
-  if (!task || task.project.ownerId !== user.id) {
+  if (!task) {
     return NextResponse.json(
       { ok: false, error: "Task not found." },
       { status: 404 },
@@ -96,9 +138,13 @@ export async function PATCH(
   const data: {
     title?: string;
     description?: string | null;
+    issueType?: "EPIC" | "STORY" | "TASK" | "BUG";
     status?: "TODO" | "IN_PROGRESS" | "DONE";
     priority?: "LOW" | "MEDIUM" | "HIGH";
+    storyPoints?: number | null;
     dueDate?: Date | null;
+    assigneeId?: string | null;
+    sprintId?: string | null;
   } = {};
 
   if (typeof payload?.title === "string") {
@@ -115,6 +161,16 @@ export async function PATCH(
   if (typeof payload?.description === "string") {
     const description = payload.description.trim();
     data.description = description || null;
+  }
+
+  if (typeof payload?.issueType === "string") {
+    if (!ISSUE_TYPES.has(payload.issueType)) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid issue type." },
+        { status: 400 },
+      );
+    }
+    data.issueType = payload.issueType as "EPIC" | "STORY" | "TASK" | "BUG";
   }
 
   if (typeof payload?.status === "string") {
@@ -137,6 +193,17 @@ export async function PATCH(
     data.priority = payload.priority as "LOW" | "MEDIUM" | "HIGH";
   }
 
+  if ("storyPoints" in (payload ?? {})) {
+    const parsed = parseStoryPoints(payload?.storyPoints);
+    if (parsed === undefined) {
+      return NextResponse.json(
+        { ok: false, error: "Story points must be a whole number between 1 and 100." },
+        { status: 400 },
+      );
+    }
+    data.storyPoints = parsed;
+  }
+
   if ("dueDate" in (payload ?? {})) {
     const parsed = parseDueDate(payload?.dueDate ?? null);
     if (parsed === undefined) {
@@ -148,6 +215,61 @@ export async function PATCH(
     data.dueDate = parsed;
   }
 
+  if ("assigneeId" in (payload ?? {})) {
+    const parsed = parseNullableId(payload?.assigneeId ?? null);
+    if (parsed === undefined) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid assignee." },
+        { status: 400 },
+      );
+    }
+
+    const collaboratorIds = new Set([
+      task.project.ownerId,
+      ...task.project.members.map((member) => member.userId),
+    ]);
+
+    if (parsed && !collaboratorIds.has(parsed)) {
+      return NextResponse.json(
+        { ok: false, error: "Assignee must be part of this project." },
+        { status: 400 },
+      );
+    }
+
+    data.assigneeId = parsed;
+  }
+
+  if ("sprintId" in (payload ?? {})) {
+    const parsed = parseNullableId(payload?.sprintId ?? null);
+    if (parsed === undefined) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid sprint." },
+        { status: 400 },
+      );
+    }
+
+    if (parsed) {
+      const sprint = await prisma.sprint.findFirst({
+        where: {
+          id: parsed,
+          projectId: task.projectId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!sprint) {
+        return NextResponse.json(
+          { ok: false, error: "Sprint not found for this project." },
+          { status: 400 },
+        );
+      }
+    }
+
+    data.sprintId = parsed;
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json(
       { ok: false, error: "No updates provided." },
@@ -155,8 +277,7 @@ export async function PATCH(
     );
   }
 
-  const shouldLogCompletion =
-    data.status === "DONE" && task.status !== "DONE";
+  const shouldLogCompletion = data.status === "DONE" && task.status !== "DONE";
 
   const updatedTask = await prisma.$transaction(async (tx) => {
     const nextTask = await tx.task.update({
@@ -168,11 +289,27 @@ export async function PATCH(
         id: true,
         title: true,
         description: true,
+        issueType: true,
         status: true,
         priority: true,
+        storyPoints: true,
         dueDate: true,
         createdAt: true,
         updatedAt: true,
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        sprint: {
+          select: {
+            id: true,
+            title: true,
+            isActive: true,
+          },
+        },
       },
     });
 
@@ -180,7 +317,7 @@ export async function PATCH(
       await tx.activity.create({
         data: {
           type: "TASK_COMPLETED",
-          message: `completed task "${nextTask.title}"`,
+          message: `completed ${nextTask.issueType.toLowerCase()} \"${nextTask.title}\"`,
           userId: user.id,
           projectId: task.projectId,
           taskId: nextTask.id,
@@ -216,9 +353,10 @@ export async function DELETE(
     );
   }
 
-  const task = await prisma.task.findUnique({
+  const task = await prisma.task.findFirst({
     where: {
       id: taskId,
+      ...accessibleTaskWhere(user.id),
     },
     select: {
       id: true,
@@ -231,10 +369,17 @@ export async function DELETE(
     },
   });
 
-  if (!task || task.project.ownerId !== user.id) {
+  if (!task) {
     return NextResponse.json(
       { ok: false, error: "Task not found." },
       { status: 404 },
+    );
+  }
+
+  if (task.project.ownerId !== user.id) {
+    return NextResponse.json(
+      { ok: false, error: "Only the project owner can delete tasks." },
+      { status: 403 },
     );
   }
 
@@ -248,5 +393,3 @@ export async function DELETE(
 
   return NextResponse.json({ ok: true });
 }
-
-

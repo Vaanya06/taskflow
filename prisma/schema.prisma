@@ -38,6 +38,7 @@ model Project {
   ownerId     String
   members     Membership[]
   owner       User         @relation(fields: [ownerId], references: [id])
+  sprints     Sprint[]
   tasks       Task[]
   activities  Activity[]
 }
@@ -46,18 +47,35 @@ model Task {
   id          String      @id @default(uuid())
   title       String
   description String?
+  issueType   IssueType   @default(TASK)
   status      TaskStatus  @default(TODO)
   priority    Priority    @default(MEDIUM)
+  storyPoints Int?
   dueDate     DateTime?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   projectId   String
   assigneeId  String?
+  sprintId    String?
   comments    Comment[]
   assignee    User?       @relation("AssignedTasks", fields: [assigneeId], references: [id])
   project     Project     @relation(fields: [projectId], references: [id])
+  sprint      Sprint?     @relation(fields: [sprintId], references: [id], onDelete: SetNull)
   labels      TaskLabel[]
   activities  Activity[]
+}
+
+model Sprint {
+  id        String   @id @default(uuid())
+  title     String
+  goal      String?
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     Task[]
 }
 
 model Activity {
@@ -125,6 +143,13 @@ enum Priority {
   HIGH
 }
 
+enum IssueType {
+  EPIC
+  STORY
+  TASK
+  BUG
+}
+
 enum Role {
   OWNER
   MEMBER
@@ -134,4 +159,5 @@ enum ActivityType {
   TASK_CREATED
   TASK_COMPLETED
   TASK_COMMENTED
+  SPRINT_CREATED
 }

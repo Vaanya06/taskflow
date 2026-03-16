@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
+import { accessibleTaskWhere } from "@/project-access";
 
 type RouteContext = {
   params: Promise<{
@@ -53,21 +54,17 @@ export async function POST(
     );
   }
 
-  const task = await prisma.task.findUnique({
+  const task = await prisma.task.findFirst({
     where: {
       id: taskId,
+      ...accessibleTaskWhere(user.id),
     },
     select: {
       id: true,
-      project: {
-        select: {
-          ownerId: true,
-        },
-      },
     },
   });
 
-  if (!task || task.project.ownerId !== user.id) {
+  if (!task) {
     return NextResponse.json(
       { ok: false, error: "Task not found." },
       { status: 404 },
