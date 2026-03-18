@@ -1,6 +1,6 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuthFrame } from "@/components/AuthFrame";
+import { AuthFrame } from "@/app/auth-frame";
 import { getCurrentUser } from "@/lib/auth";
 import LoginForm from "./login-form";
 
@@ -13,12 +13,12 @@ export default async function LoginPage() {
   return (
     <AuthFrame
       eyebrow="Sign in"
-      title="Welcome back"
-      description="Open your workspace, review active projects, and continue task flow from the same focused dashboard interface."
+      title="Welcome back to the board"
+      description="Open your workspace, catch the current sprint pulse, and jump back into the tasks that need your attention first."
       footer={
         <p>
           New here?{" "}
-          <Link className="font-semibold text-white/75 transition hover:text-white" href="/register">
+          <Link className="font-semibold text-[var(--accent)] transition hover:text-white" href="/register">
             Create an account
           </Link>
         </p>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppShell } from "@/components/AppShell";
+import { WorkspaceShell } from "@/app/workspace-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accessibleProjectWhere } from "@/project-access";
@@ -392,7 +392,7 @@ export default async function ProjectPage({ params }: PageProps) {
   });
 
   return (
-    <AppShell
+    <WorkspaceShell
       title="Project Workspace"
       navItems={[
         { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
@@ -786,6 +786,6 @@ export default async function ProjectPage({ params }: PageProps) {
           )}
         </section>
       </div>
-    </AppShell>
+    </WorkspaceShell>
   );
 }

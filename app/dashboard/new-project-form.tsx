@@ -1,7 +1,13 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+
+const STARTER_NOTES = [
+  "Product launch",
+  "Client delivery",
+  "Ops cleanup",
+];
 
 export default function NewProjectForm() {
   const router = useRouter();
@@ -62,70 +68,81 @@ export default function NewProjectForm() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex h-8 items-center gap-1.5 rounded-lg bg-indigo-500 px-4 text-xs font-semibold text-white transition hover:bg-indigo-400"
+        className="accent-button flex h-10 items-center gap-2 px-4 text-xs font-semibold uppercase tracking-[0.18em]"
       >
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path d="M5 1v8M1 5h8" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M5 1v8M1 5h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
         New project
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-xl border border-white/[0.08] bg-[#1a1d27] shadow-2xl shadow-black/50">
-          <div className="border-b border-white/[0.07] px-4 py-3">
-            <p className="text-xs font-semibold text-white/70">New project</p>
-            <p className="mt-0.5 text-[11px] text-white/30">
-              Create a workspace to organize tasks.
-            </p>
+        <div className="panel-card absolute right-0 top-12 z-50 w-[360px] rounded-[28px] p-5 shadow-[0_28px_100px_rgba(3,11,16,0.45)]">
+          <div className="surface-grid absolute inset-0 opacity-[0.08]" />
+          <div className="relative border-b border-white/[0.08] pb-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">
+                  New workspace
+                </p>
+                <p className="mt-2 text-sm leading-6 text-white/44">
+                  Create a fresh home for tasks, sprint planning, and team activity.
+                </p>
+              </div>
+              <span className="badge-pill text-[10px] font-semibold text-white/58">Fast setup</span>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-white/46">
+              {STARTER_NOTES.map((item) => (
+                <span key={item} className="badge-pill px-3 py-1.5">
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <form className="flex flex-col gap-3 p-4" onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-white/40">
-                Project name
-              </label>
+          <form className="relative mt-4 flex flex-col gap-4" onSubmit={handleSubmit}>
+            <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/38">
+              Project name
               <input
-                className="h-9 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder-white/20 outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
+                className="soft-input h-11 rounded-2xl px-4 text-sm normal-case tracking-normal"
                 name="title"
                 type="text"
                 placeholder="Launch marketing site"
                 required
                 autoFocus
               />
-            </div>
+            </label>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-white/40">
-                Description
-              </label>
+            <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/38">
+              Description
               <textarea
-                className="min-h-[72px] resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/20 outline-none transition focus:border-indigo-500/50 focus:bg-white/[0.07]"
+                className="soft-input min-h-[92px] resize-none rounded-[22px] px-4 py-3 text-sm normal-case tracking-normal"
                 name="description"
-                placeholder="Optional details"
-                rows={3}
+                placeholder="What does this space need to coordinate?"
+                rows={4}
               />
-            </div>
+            </label>
 
             {error ? (
-              <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+              <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                 {error}
               </p>
             ) : null}
 
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <div className="flex items-center justify-between gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-8 items-center rounded-lg border border-white/10 px-3 text-xs text-white/40 transition hover:text-white/70"
+                className="secondary-button flex h-10 items-center px-4 text-xs font-semibold uppercase tracking-[0.16em]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isPending}
-                className="flex h-8 items-center rounded-lg bg-indigo-500 px-4 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:opacity-50"
+                className="accent-button flex h-10 items-center px-5 text-xs font-semibold uppercase tracking-[0.16em] disabled:opacity-50"
               >
-                {isPending ? "Creating..." : "Create"}
+                {isPending ? "Creating..." : "Create workspace"}
               </button>
             </div>
           </form>

@@ -1,6 +1,6 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AuthFrame } from "@/components/AuthFrame";
+import { AuthFrame } from "@/app/auth-frame";
 import { getCurrentUser } from "@/lib/auth";
 import RegisterForm from "./register-form";
 
@@ -13,12 +13,12 @@ export default async function RegisterPage() {
   return (
     <AuthFrame
       eyebrow="Create account"
-      title="Start your workspace"
-      description="Create your account to organize projects, move tasks through the board, and keep updates readable from day one."
+      title="Start a brighter workspace"
+      description="Create your account to organize projects, move work through the board, and keep sprint decisions visible from day one."
       footer={
         <p>
           Already have an account?{" "}
-          <Link className="font-semibold text-white/75 transition hover:text-white" href="/login">
+          <Link className="font-semibold text-[var(--accent)] transition hover:text-white" href="/login">
             Sign in
           </Link>
         </p>

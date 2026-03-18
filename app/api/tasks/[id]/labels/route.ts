@@ -34,6 +34,26 @@ function normalizeColor(value: unknown): string | null {
   return hex.toLowerCase();
 }
 
+function parseLabelId(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+}
+
+async function getTaskForLabels(taskId: string, userId: string) {
+  return prisma.task.findFirst({
+    where: {
+      id: taskId,
+      ...accessibleTaskWhere(userId),
+    },
+    select: {
+      id: true,
+    },
+  });
+}
+
 export async function POST(
   request: Request,
   { params }: RouteContext,
@@ -54,15 +74,7 @@ export async function POST(
     );
   }
 
-  const task = await prisma.task.findFirst({
-    where: {
-      id: taskId,
-      ...accessibleTaskWhere(user.id),
-    },
-    select: {
-      id: true,
-    },
-  });
+  const task = await getTaskForLabels(taskId, user.id);
 
   if (!task) {
     return NextResponse.json(
@@ -78,8 +90,7 @@ export async function POST(
     payload = null;
   }
 
-  const labelId =
-    typeof payload?.labelId === "string" ? payload.labelId.trim() : "";
+  const labelId = parseLabelId(payload?.labelId);
   const name = typeof payload?.name === "string" ? payload.name.trim() : "";
   const color = normalizeColor(payload?.color ?? null);
 
@@ -156,4 +167,86 @@ export async function POST(
   }
 
   return NextResponse.json({ ok: true, label });
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: RouteContext,
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized." },
+      { status: 401 },
+    );
+  }
+
+  const { id: taskId } = await params;
+  if (!taskId) {
+    return NextResponse.json(
+      { ok: false, error: "Task id is required." },
+      { status: 400 },
+    );
+  }
+
+  const task = await getTaskForLabels(taskId, user.id);
+
+  if (!task) {
+    return NextResponse.json(
+      { ok: false, error: "Task not found." },
+      { status: 404 },
+    );
+  }
+
+  let payload: LabelPayload | null = null;
+  try {
+    payload = await request.json();
+  } catch {
+    payload = null;
+  }
+
+  const url = new URL(request.url);
+  const labelId = parseLabelId(url.searchParams.get("labelId") || payload?.labelId);
+
+  if (!labelId) {
+    return NextResponse.json(
+      { ok: false, error: "Label id is required." },
+      { status: 400 },
+    );
+  }
+
+  const existing = await prisma.taskLabel.findUnique({
+    where: {
+      taskId_labelId: {
+        taskId,
+        labelId,
+      },
+    },
+    select: {
+      label: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!existing) {
+    return NextResponse.json(
+      { ok: false, error: "Label is not attached to this task." },
+      { status: 404 },
+    );
+  }
+
+  await prisma.taskLabel.delete({
+    where: {
+      taskId_labelId: {
+        taskId,
+        labelId,
+      },
+    },
+  });
+
+  return NextResponse.json({ ok: true, label: existing.label });
 }

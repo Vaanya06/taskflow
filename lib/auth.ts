@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { isDatabaseConnectionError } from "@/lib/database-errors";
 
 export type AuthUser = {
   id: string;
@@ -40,11 +41,21 @@ export async function createSession(userId: string): Promise<{
 
 export async function deleteSessionByToken(token: string): Promise<void> {
   const tokenHash = hashToken(token);
-  await prisma.session.deleteMany({
-    where: {
-      tokenHash,
-    },
-  });
+
+  try {
+    await prisma.session.deleteMany({
+      where: {
+        tokenHash,
+      },
+    });
+  } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      console.warn("Skipping session delete because the database connection is unavailable.");
+      return;
+    }
+
+    throw error;
+  }
 }
 
 export async function getUserBySessionToken(
@@ -55,31 +66,56 @@ export async function getUserBySessionToken(
   }
 
   const tokenHash = hashToken(token);
-  const session = await prisma.session.findUnique({
-    where: {
-      tokenHash,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
+
+  let session:
+    | {
+        id: string;
+        expiresAt: Date;
+        user: AuthUser;
+      }
+    | null;
+
+  try {
+    session = await prisma.session.findUnique({
+      where: {
+        tokenHash,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      console.warn("Session lookup failed because the database connection is unavailable.");
+      return null;
+    }
+
+    throw error;
+  }
 
   if (!session) {
     return null;
   }
 
   if (session.expiresAt.getTime() < Date.now()) {
-    await prisma.session.delete({
-      where: {
-        id: session.id,
-      },
-    });
+    try {
+      await prisma.session.delete({
+        where: {
+          id: session.id,
+        },
+      });
+    } catch (error) {
+      if (!isDatabaseConnectionError(error)) {
+        throw error;
+      }
+    }
+
     return null;
   }
 
