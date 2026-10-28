@@ -15,18 +15,20 @@ export default function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") || "").trim();
     const password = String(formData.get("password") || "");
+    const adminSetupToken = String(formData.get("adminSetupToken") || "");
 
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, adminSetupToken }),
     });
 
     if (response.ok) {
+      const data = await response.json();
       startTransition(() => {
-        router.push("/dashboard");
+        router.push(data.user?.role === "ADMIN" ? "/admin" : "/dashboard");
         router.refresh();
       });
       return;
@@ -70,6 +72,24 @@ export default function LoginForm() {
           autoComplete="current-password"
         />
       </label>
+
+      <details className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+        <summary className="cursor-pointer text-xs font-semibold text-white/55">
+          Admin account setup
+        </summary>
+        <label className="mt-3 grid gap-2 text-sm font-medium text-white/48">
+          Setup token
+          <input
+            className="soft-input h-11 rounded-2xl px-4 text-sm"
+            name="adminSetupToken"
+            type="password"
+            autoComplete="off"
+          />
+        </label>
+        <p className="mt-2 text-xs leading-5 text-white/34">
+          Only use the token provided by your Taskflow administrator.
+        </p>
+      </details>
 
       {error ? (
         <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">

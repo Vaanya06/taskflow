@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 const connectionString = process.env.DATABASE_URL;
 const RETRYABLE_CONNECTION_ERROR_CODES = new Set(["P1001", "P1017"]);
-const connectionTimeoutMillis = Number(process.env.PG_CONNECTION_TIMEOUT_MS || 4000);
+const connectionTimeoutMillis = Number(process.env.PG_CONNECTION_TIMEOUT_MS || 15000);
 
 if (!connectionString) {
   throw new Error("DATABASE_URL is not set.");

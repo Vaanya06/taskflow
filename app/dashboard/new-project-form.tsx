@@ -77,7 +77,7 @@ export default function NewProjectForm() {
       </button>
 
       {open ? (
-        <div className="panel-card absolute right-0 top-12 z-50 w-[360px] rounded-[28px] p-5 shadow-[0_28px_100px_rgba(3,11,16,0.45)]">
+        <div className="panel-card project-popover absolute right-0 top-12 z-50 w-[360px] rounded-[28px] p-5 shadow-[0_28px_100px_rgba(3,11,16,0.45)]">
           <div className="surface-grid absolute inset-0 opacity-[0.08]" />
           <div className="relative border-b border-white/[0.08] pb-4">
             <div className="flex items-start justify-between gap-3">

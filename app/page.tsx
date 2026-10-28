@@ -58,15 +58,15 @@ const faqItems = [
 
 export default async function Home() {
   const user = await getCurrentUser();
-  const primaryHref = user ? "/dashboard" : "/register";
+  const primaryHref = user ? (user.role === "ADMIN" ? "/admin" : "/dashboard") : "/register";
   const primaryLabel = user ? "Open dashboard" : "Create account";
-  const secondaryHref = user ? "/dashboard" : "/login";
+  const secondaryHref = user ? (user.role === "ADMIN" ? "/admin" : "/dashboard") : "/login";
   const secondaryLabel = user ? "Review projects" : "Sign in";
 
   return (
     <main className="min-h-screen text-white">
       <header className="sticky top-0 z-20 border-b border-white/[0.08] bg-[rgba(7,18,25,0.78)] backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-6 py-4">
           <Link href="/" className="flex items-center gap-3 text-sm font-semibold text-white">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(62,214,177,0.95),rgba(127,211,247,0.84))] text-[#05231d] shadow-[0_18px_34px_rgba(62,214,177,0.22)]">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -88,7 +88,7 @@ export default async function Home() {
             <Link href="#faq" className="transition hover:text-white/84">FAQ</Link>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-self-end gap-2">
             <Link href={secondaryHref} className="secondary-button hidden h-10 items-center px-4 text-xs font-semibold uppercase tracking-[0.18em] sm:flex">
               {secondaryLabel}
             </Link>
@@ -139,7 +139,7 @@ export default async function Home() {
               </span>
             </div>
 
-            <div className="mt-6 grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
+            <div className="mt-6 grid gap-4">
               <div className="panel-card-soft rounded-[28px] p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">Flow cues</p>
                 <div className="mt-4 grid gap-3">

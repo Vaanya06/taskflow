@@ -143,6 +143,10 @@ textarea {
     rgba(8, 18, 25, 0.78);
 }
 
+.panel-card.project-popover {
+  position: absolute;
+}
+
 .panel-card-soft {
   background:
     linear-gradient(180deg, rgba(16, 31, 40, 0.82), rgba(11, 21, 29, 0.76)),

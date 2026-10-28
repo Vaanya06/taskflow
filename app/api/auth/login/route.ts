@@ -3,10 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { createSession, SESSION_COOKIE } from "@/lib/auth";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
+import { validateAdminBootstrap } from "@/lib/admin-bootstrap";
 
 type LoginPayload = {
   email?: string;
   password?: string;
+  adminSetupToken?: string;
 };
 
 export async function POST(request: Request) {
@@ -22,6 +24,10 @@ export async function POST(request: Request) {
       ? payload.email.trim().toLowerCase()
       : "";
   const password = typeof payload?.password === "string" ? payload.password : "";
+  const adminSetupToken =
+    typeof payload?.adminSetupToken === "string"
+      ? payload.adminSetupToken
+      : "";
 
   if (!email || !password) {
     return NextResponse.json(
@@ -52,6 +58,30 @@ export async function POST(request: Request) {
       );
     }
 
+    let role = user.role;
+    if (adminSetupToken) {
+      const isValidAdminSetup = validateAdminBootstrap(email, adminSetupToken);
+      if (isValidAdminSetup === null) {
+        return NextResponse.json(
+          { ok: false, error: "Admin setup is not configured on the server." },
+          { status: 503 },
+        );
+      }
+      if (!isValidAdminSetup) {
+        return NextResponse.json(
+          { ok: false, error: "Invalid admin setup details." },
+          { status: 403 },
+        );
+      }
+
+      const promotedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: { role: "ADMIN" },
+        select: { role: true },
+      });
+      role = promotedUser.role;
+    }
+
     const { token, expiresAt } = await createSession(user.id);
     const response = NextResponse.json({
       ok: true,
@@ -59,6 +89,7 @@ export async function POST(request: Request) {
         id: user.id,
         email: user.email,
         name: user.name,
+        role,
       },
     });
 

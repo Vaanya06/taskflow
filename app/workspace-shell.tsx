@@ -190,7 +190,7 @@ export function WorkspaceShell({
       </aside>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <header className="relative flex min-h-16 shrink-0 flex-col gap-3 border-b border-white/[0.08] bg-[rgba(7,18,25,0.76)] px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <header className="relative z-30 flex min-h-16 shrink-0 flex-col gap-3 border-b border-white/[0.08] bg-[rgba(7,18,25,0.76)] px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/28">
               Workspace view

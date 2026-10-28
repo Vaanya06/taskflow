@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 
@@ -7,6 +8,7 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string | null;
+  role: UserRole;
 };
 
 export const SESSION_COOKIE = "taskflow_session";
@@ -86,6 +88,7 @@ export async function getUserBySessionToken(
             id: true,
             email: true,
             name: true,
+            role: true,
           },
         },
       },

@@ -151,6 +151,9 @@ export default async function DashboardPage() {
   if (!user) {
     redirect("/login");
   }
+  if (user.role === "ADMIN") {
+    redirect("/admin");
+  }
 
   const [projects, activities, tasks] = await Promise.all([
     prisma.project.findMany({

@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { createSession, SESSION_COOKIE } from "@/lib/auth";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
+import { validateAdminBootstrap } from "@/lib/admin-bootstrap";
 
 type RegisterPayload = {
   name?: string;
   email?: string;
   password?: string;
+  adminSetupToken?: string;
 };
 
 export async function POST(request: Request) {
@@ -24,12 +26,36 @@ export async function POST(request: Request) {
       ? payload.email.trim().toLowerCase()
       : "";
   const password = typeof payload?.password === "string" ? payload.password : "";
+  const adminSetupToken =
+    typeof payload?.adminSetupToken === "string"
+      ? payload.adminSetupToken
+      : "";
 
   if (!email || !email.includes("@") || password.length < 8) {
     return NextResponse.json(
       { ok: false, error: "Invalid registration details." },
       { status: 400 },
     );
+  }
+
+  let role: "USER" | "ADMIN" = "USER";
+  if (adminSetupToken) {
+    const isValidAdminSetup = validateAdminBootstrap(email, adminSetupToken);
+    if (isValidAdminSetup === null) {
+      return NextResponse.json(
+        { ok: false, error: "Admin setup is not configured on the server." },
+        { status: 503 },
+      );
+    }
+
+    if (!isValidAdminSetup) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid admin setup details." },
+        { status: 403 },
+      );
+    }
+
+    role = "ADMIN";
   }
 
   try {
@@ -52,6 +78,7 @@ export async function POST(request: Request) {
         email,
         name: name || null,
         password: passwordHash,
+        role,
       },
     });
 
@@ -62,6 +89,7 @@ export async function POST(request: Request) {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       },
     });
 
