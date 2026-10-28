@@ -13,6 +13,15 @@ export function accessibleProjectWhere(userId: string): Prisma.ProjectWhereInput
           },
         },
       },
+      {
+        team: {
+          memberships: {
+            some: {
+              userId,
+            },
+          },
+        },
+      },
     ],
   };
 }

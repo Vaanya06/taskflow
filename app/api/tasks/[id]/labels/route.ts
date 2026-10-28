@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { accessibleTaskWhere } from "@/project-access";
+import { canManageProjectTasks } from "@/lib/project-task-permissions";
 
 type RouteContext = {
   params: Promise<{
@@ -50,6 +51,13 @@ async function getTaskForLabels(taskId: string, userId: string) {
     },
     select: {
       id: true,
+      project: {
+        select: {
+          ownerId: true,
+          members: { select: { userId: true } },
+          team: { select: { memberships: { select: { userId: true, role: true } } } },
+        },
+      },
     },
   });
 }
@@ -81,6 +89,9 @@ export async function POST(
       { ok: false, error: "Task not found." },
       { status: 404 },
     );
+  }
+  if (!canManageProjectTasks(task.project, user.id, user.role)) {
+    return NextResponse.json({ ok: false, error: "Only project members and team managers can change issue labels." }, { status: 403 });
   }
 
   let payload: LabelPayload | null = null;
@@ -196,6 +207,9 @@ export async function DELETE(
       { ok: false, error: "Task not found." },
       { status: 404 },
     );
+  }
+  if (!canManageProjectTasks(task.project, user.id, user.role)) {
+    return NextResponse.json({ ok: false, error: "Only project members and team managers can change issue labels." }, { status: 403 });
   }
 
   let payload: LabelPayload | null = null;

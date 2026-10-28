@@ -7,6 +7,10 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+function isUserRole(value: unknown): value is UserRole {
+  return Object.values(UserRole).some((role) => role === value);
+}
+
 export async function PATCH(request: Request, { params }: RouteContext) {
   const actor = await getCurrentUser();
   if (!actor) {
@@ -41,9 +45,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
 
   const role = payload?.role;
-  if (role !== UserRole.ADMIN && role !== UserRole.USER) {
+  if (!isUserRole(role) || role === UserRole.MANAGER) {
     return NextResponse.json(
-      { ok: false, error: "Role must be ADMIN or USER." },
+      { ok: false, error: "Choose ADMIN or USER. Manager access is granted through team assignment." },
       { status: 400 },
     );
   }
@@ -67,6 +71,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
             return "last-admin" as const;
           }
         }
+        if (target.role === UserRole.MANAGER) {
+          const managedTeamCount = await transaction.teamMembership.count({
+            where: { userId: id, role: "MANAGER" },
+          });
+          if (managedTeamCount > 0) {
+            return "managed-teams" as const;
+          }
+        }
 
         return transaction.user.update({
           where: { id },
@@ -86,6 +98,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     if (updatedUser === "last-admin") {
       return NextResponse.json(
         { ok: false, error: "The last administrator cannot be demoted." },
+        { status: 409 },
+      );
+    }
+    if (updatedUser === "managed-teams") {
+      return NextResponse.json(
+        { ok: false, error: "Assign another manager to this user's teams before changing their account role." },
         { status: 409 },
       );
     }

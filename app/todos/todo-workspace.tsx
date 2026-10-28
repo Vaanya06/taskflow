@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { WorkspaceSwitcher } from "@/app/workspace-switcher";
 
 type TodoList = {
   id: string;
@@ -486,6 +487,10 @@ export default function TodoWorkspace({
             <button type="button" onClick={() => void logout()} className="text-xs text-slate-500 hover:text-slate-900" title="Sign out">↗</button>
           </div>
 
+          <div className="mt-4 px-1">
+            <WorkspaceSwitcher current="personal" />
+          </div>
+
           <nav className="mt-7 grid grid-cols-2 gap-1 lg:grid-cols-1">
             {([
               ["my-day", "My Day", "sun"],
@@ -536,11 +541,6 @@ export default function TodoWorkspace({
           </div>
 
           <div className="mt-auto pt-8">
-            <Link href="/dashboard" className="todo-nav-item">
-              <Icon name="folder" className="h-[18px] w-[18px]" />
-              <span>Projects</span>
-              <span className="ml-auto text-xs text-slate-400">↗</span>
-            </Link>
             <p className="px-3 pt-5 text-[11px] leading-5 text-slate-400">Small steps count. Keep today kind and doable.</p>
           </div>
         </aside>

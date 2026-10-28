@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 
 type UserRoleControlProps = {
   userId: string;
-  role: "ADMIN" | "USER";
+  role: "ADMIN" | "MANAGER" | "USER";
   isCurrentUser: boolean;
 };
 
@@ -18,7 +18,7 @@ export default function UserRoleControl({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  async function updateRole(nextRole: "ADMIN" | "USER") {
+  async function updateRole(nextRole: "ADMIN" | "MANAGER" | "USER") {
     setError(null);
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
@@ -50,9 +50,10 @@ export default function UserRoleControl({
             className="soft-input h-10 rounded-xl px-3 text-sm"
             value={role}
             disabled={isPending}
-            onChange={(event) => updateRole(event.target.value as "ADMIN" | "USER")}
+            onChange={(event) => updateRole(event.target.value as "ADMIN" | "MANAGER" | "USER")}
           >
             <option value="USER">User</option>
+            <option value="MANAGER" disabled>Manager · appointed to a team</option>
             <option value="ADMIN">Admin</option>
           </select>
         </label>

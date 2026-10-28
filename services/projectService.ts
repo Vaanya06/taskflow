@@ -54,6 +54,13 @@ export async function listProjectsForUser(
           userId: true,
         },
       },
+      team: {
+        select: {
+          memberships: {
+            select: { userId: true },
+          },
+        },
+      },
     },
   });
 
@@ -67,7 +74,11 @@ export async function listProjectsForUser(
       createdAt: project.createdAt.toISOString(),
       owner: project.owner,
       role,
-      memberCount: new Set([project.ownerId, ...project.members.map((member) => member.userId)]).size,
+      memberCount: new Set([
+        project.ownerId,
+        ...project.members.map((member) => member.userId),
+        ...(project.team?.memberships.map((member) => member.userId) ?? []),
+      ]).size,
     };
   });
 

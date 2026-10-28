@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { invalidateTasksByProject } from "@/services/taskService";
 import { accessibleTaskWhere } from "@/project-access";
+import { canManageProjectTasks } from "@/lib/project-task-permissions";
 
 const ISSUE_TYPES = new Set(["EPIC", "STORY", "TASK", "BUG"]);
 const TASK_STATUSES = new Set(["TODO", "IN_PROGRESS", "DONE"]);
@@ -107,6 +108,7 @@ export async function PATCH(
       id: true,
       title: true,
       status: true,
+      assigneeId: true,
       projectId: true,
       project: {
         select: {
@@ -114,6 +116,11 @@ export async function PATCH(
           members: {
             select: {
               userId: true,
+            },
+          },
+          team: {
+            select: {
+              memberships: { select: { userId: true, role: true } },
             },
           },
         },
@@ -133,6 +140,17 @@ export async function PATCH(
     payload = await request.json();
   } catch {
     payload = null;
+  }
+
+  const teamMembership = task.project.team?.memberships.find((membership) => membership.userId === user.id);
+  if (!canManageProjectTasks(task.project, user.id, user.role)) {
+    if (!teamMembership || task.assigneeId !== user.id) {
+      return NextResponse.json({ ok: false, error: "Team members can update the status of issues assigned to them." }, { status: 403 });
+    }
+    const submittedKeys = Object.keys(payload ?? {});
+    if (submittedKeys.length !== 1 || submittedKeys[0] !== "status") {
+      return NextResponse.json({ ok: false, error: "Team members can update the status of their assigned issues; ask a manager to change issue details or assignments." }, { status: 403 });
+    }
   }
 
   const data: {
@@ -227,6 +245,7 @@ export async function PATCH(
     const collaboratorIds = new Set([
       task.project.ownerId,
       ...task.project.members.map((member) => member.userId),
+      ...(task.project.team?.memberships.map((member) => member.userId) ?? []),
     ]);
 
     if (parsed && !collaboratorIds.has(parsed)) {

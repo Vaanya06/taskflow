@@ -346,6 +346,7 @@ export default async function DashboardPage() {
   return (
     <WorkspaceShell
       title="Dashboard"
+      currentWorkspace="projects"
       navItems={[
         { href: "/dashboard", label: "Dashboard", icon: "dashboard", active: true },
         { href: "#projects", label: "Projects", icon: "folder", badge: String(projects.length) },

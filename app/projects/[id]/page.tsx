@@ -8,6 +8,7 @@ import LogoutButton from "@/app/dashboard/logout-button";
 import AddMemberForm from "./add-member-form";
 import AddSprintForm from "./add-sprint-form";
 import TaskBoard from "./task-board";
+import ProjectTeamControl from "./project-team-control";
 
 type PageProps = {
   params: Promise<{
@@ -144,6 +145,17 @@ export default async function ProjectPage({ params }: PageProps) {
           },
         },
       },
+      team: {
+        select: {
+          id: true,
+          name: true,
+          memberships: {
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
+        },
+      },
       sprints: {
         orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
         select: {
@@ -162,6 +174,14 @@ export default async function ProjectPage({ params }: PageProps) {
   if (!project) {
     notFound();
   }
+
+  const managedTeams = user.role === "MANAGER"
+    ? await prisma.team.findMany({
+        where: { memberships: { some: { userId: user.id, role: "MANAGER" } } },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   const [tasks, activities] = await Promise.all([
     prisma.task.findMany({
@@ -261,6 +281,16 @@ export default async function ProjectPage({ params }: PageProps) {
         role: membership.role,
       });
     }
+    for (const membership of project.team?.memberships ?? []) {
+      if (!teamMemberMap.has(membership.user.id)) {
+        teamMemberMap.set(membership.user.id, {
+          id: membership.user.id,
+          name: membership.user.name,
+          email: membership.user.email,
+          role: "MEMBER",
+        });
+      }
+    }
   }
 
   const teamMembers = Array.from(teamMemberMap.values()).sort((left, right) => {
@@ -336,6 +366,12 @@ export default async function ProjectPage({ params }: PageProps) {
   const projectProgress = getCompletion(totalTasks, doneTasks);
   const activeSprintProgress = getCompletion(activeSprintTasks.length, activeSprintDone);
   const isProjectOwner = project.ownerId === user.id;
+  const isDirectProjectMember = project.members.some((member) => member.user.id === user.id);
+  const isTeamManager = user.role === "MANAGER" &&
+    project.team?.memberships.some(
+      (membership) => membership.userId === user.id && membership.role === "MANAGER",
+    ) === true;
+  const canManageProjectTasks = isProjectOwner || isDirectProjectMember || isTeamManager;
 
   const assignmentsByMember = new Map<string, { total: number; open: number }>();
   for (const task of tasks) {
@@ -394,8 +430,8 @@ export default async function ProjectPage({ params }: PageProps) {
   return (
     <WorkspaceShell
       title="Project Workspace"
+      currentWorkspace="projects"
       navItems={[
-        { href: "/todos", label: "My tasks", icon: "home" },
         { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
         { href: "#overview", label: "Overview", icon: "folder" },
         {
@@ -431,7 +467,7 @@ export default async function ProjectPage({ params }: PageProps) {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
         <header
           id="overview"
-          className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-6"
+          className="rounded-xl border border-white/[0.07] bg-white p-6"
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-white/30">
             Project Workspace
@@ -450,6 +486,20 @@ export default async function ProjectPage({ params }: PageProps) {
                   Plan the backlog, run sprints, and keep shared ownership visible in one place.
                 </p>
               )}
+              <p className="mt-3 text-xs text-slate-500">
+                Shared project issues are managed here; personal to-dos stay separate.
+              </p>
+              {project.team ? (
+                <p className="mt-2 text-sm font-medium text-indigo-700">Team: {project.team.name}</p>
+              ) : null}
+              <ProjectTeamControl
+                projectId={project.id}
+                currentTeamId={project.team?.id ?? null}
+                teams={managedTeams}
+                canManage={managedTeams.length > 0 && (
+                  isProjectOwner || project.members.some((membership) => membership.user.id === user.id)
+                )}
+              />
             </div>
             <div className="flex flex-wrap gap-2 text-xs text-white/40">
               <span className="rounded-full border border-white/10 px-3 py-2">{totalTasks} issues</span>
@@ -462,28 +512,28 @@ export default async function ProjectPage({ params }: PageProps) {
 
         <section id="planning" className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
                 Project progress
               </p>
               <p className="mt-2 text-3xl font-semibold text-white/90">{formatPercent(projectProgress)}</p>
               <p className="text-sm text-white/35">{doneTasks} of {totalTasks} issues completed</p>
             </div>
-            <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
                 Active sprint scope
               </p>
               <p className="mt-2 text-3xl font-semibold text-white/90">{activeSprintTasks.length}</p>
               <p className="text-sm text-white/35">{activeSprint ? `${activeSprintOpen} open / ${activeSprintPoints} points` : "Start a sprint to focus the team"}</p>
             </div>
-            <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
                 Backlog ready
               </p>
               <p className="mt-2 text-3xl font-semibold text-white/90">{backlogOpenTasks.length}</p>
               <p className="text-sm text-white/35">{backlogPoints} points waiting to be planned</p>
             </div>
-            <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
                 Assigned to me
               </p>
@@ -492,7 +542,7 @@ export default async function ProjectPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+          <div className="rounded-xl border border-white/[0.07] bg-white p-5">
             <div className="border-b border-white/[0.07] pb-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -510,7 +560,7 @@ export default async function ProjectPage({ params }: PageProps) {
             </div>
 
             {activeSprint ? (
-              <div className="mt-4 rounded-xl border border-white/[0.07] bg-[#13161f] p-4">
+              <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-white/85">{activeSprint.title}</p>
@@ -549,7 +599,7 @@ export default async function ProjectPage({ params }: PageProps) {
                 </div>
               </div>
             ) : (
-              <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-[#13161f] p-5 text-sm text-white/30">
+              <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
                 Nothing is active yet. Keep using the backlog, or create a sprint to define the team&apos;s current scope.
               </div>
             )}
@@ -558,7 +608,7 @@ export default async function ProjectPage({ params }: PageProps) {
               {isProjectOwner ? (
                 <AddSprintForm projectId={project.id} />
               ) : (
-                <div className="rounded-xl border border-dashed border-white/[0.08] bg-[#13161f] p-5 text-sm text-white/30">
+                <div className="rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
                   {getPersonLabel(project.owner)} manages sprint cadence for this project.
                 </div>
               )}
@@ -567,7 +617,7 @@ export default async function ProjectPage({ params }: PageProps) {
         </section>
 
         <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1d27]">
+          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
             <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
               <div>
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">
@@ -621,7 +671,7 @@ export default async function ProjectPage({ params }: PageProps) {
             )}
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1d27]">
+          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
             <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
               <div>
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">
@@ -684,10 +734,11 @@ export default async function ProjectPage({ params }: PageProps) {
           sprints={sprintOptions}
           currentUserId={user.id}
           canDeleteTasks={isProjectOwner}
+          canManageTasks={canManageProjectTasks}
         />
 
         <section id="team" className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1d27]">
+          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
             <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">
                 Team
@@ -724,7 +775,7 @@ export default async function ProjectPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/[0.07] bg-[#1a1d27] p-5">
+          <div className="rounded-xl border border-white/[0.07] bg-white p-5">
             <div className="border-b border-white/[0.07] pb-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
                 Collaboration
@@ -739,15 +790,15 @@ export default async function ProjectPage({ params }: PageProps) {
                 <AddMemberForm projectId={project.id} />
               </div>
             ) : (
-              <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-[#13161f] p-5 text-sm text-white/30">
+              <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
                 {getPersonLabel(project.owner)} manages membership for this project.
               </div>
             )}
 
-            <div className="mt-4 rounded-xl border border-white/[0.07] bg-[#13161f] p-4 text-sm text-white/35">
+            <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4 text-sm text-white/35">
               Assignees, story points, issue types, and sprint placement are all available directly in the board so planning stays lightweight.
             </div>
-            <div className="mt-4 rounded-xl border border-white/[0.07] bg-[#13161f] p-4 text-sm text-white/35">
+            <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4 text-sm text-white/35">
               {overdueTasks} overdue and {dueSoonTasks} due soon. Use the filters below to isolate risk before it blocks the sprint.
             </div>
           </div>
@@ -755,7 +806,7 @@ export default async function ProjectPage({ params }: PageProps) {
 
         <section
           id="activity"
-          className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1d27]"
+          className="overflow-hidden rounded-xl border border-white/[0.07] bg-white"
         >
           <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">

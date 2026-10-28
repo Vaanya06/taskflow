@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import LogoutButton from "@/app/dashboard/logout-button";
 import UserRoleControl from "./user-role-control";
+import CreateTeamForm from "./create-team-form";
+import TeamManagerControl from "./team-manager-control";
 
 export default async function AdminPage() {
   const currentUser = await getCurrentUser();
@@ -14,7 +16,7 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const [users, projects, userCount, projectCount, adminCount] = await Promise.all([
+  const [users, projects, teams, userCount, projectCount, adminCount, managerCount] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -39,18 +41,30 @@ export default async function AdminPage() {
         },
       },
     }),
+    prisma.team.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        memberships: {
+          orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+          include: { user: { select: { id: true, name: true, email: true, role: true } } },
+        },
+        _count: { select: { memberships: true, projects: true } },
+      },
+    }),
     prisma.user.count(),
     prisma.project.count(),
     prisma.user.count({ where: { role: "ADMIN" } }),
+    prisma.user.count({ where: { role: "MANAGER" } }),
   ]);
 
   return (
     <WorkspaceShell
       title="Admin"
+      currentWorkspace="projects"
       navItems={[
-        { href: "/todos", label: "My tasks", icon: "home" },
         { href: "/admin", label: "Overview", icon: "dashboard", active: true },
         { href: "#users", label: "Users", icon: "team", badge: String(userCount) },
+        { href: "#teams", label: "Teams", icon: "team", badge: String(teams.length) },
         { href: "#projects", label: "Projects", icon: "folder", badge: String(projectCount) },
       ]}
       userName={currentUser.name || currentUser.email}
@@ -67,10 +81,12 @@ export default async function AdminPage() {
           <p className="mt-5 max-w-2xl text-base leading-8 text-white/48">
             Review account roles and see every project across Taskflow. Project work and destructive project actions remain with project owners.
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid gap-4 sm:grid-cols-5">
             {[
               ["Total users", userCount],
               ["Administrators", adminCount],
+              ["Managers", managerCount],
+              ["Teams", teams.length],
               ["Projects", projectCount],
             ].map(([label, count]) => (
               <div key={label} className="panel-card-soft rounded-[24px] p-5">
@@ -79,6 +95,42 @@ export default async function AdminPage() {
               </div>
             ))}
           </div>
+        </section>
+
+        <section id="teams" className="panel-card rounded-[30px] p-5 sm:p-7">
+          <div className="mb-5">
+            <p className="section-kicker">Organization</p>
+            <h3 className="mt-2 text-2xl font-semibold text-white/90">Teams and managers</h3>
+            <p className="mt-1 text-sm text-slate-500">Create teams and appoint a manager using an existing account.</p>
+          </div>
+          <CreateTeamForm />
+          {teams.length ? (
+            <div className="mt-4 grid gap-3">
+              {teams.map((team) => (
+                <div key={team.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div>
+                    <p className="font-semibold text-slate-800">{team.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Manager: {team.memberships.filter((membership) => membership.role === "MANAGER").map((membership) => membership.user.name || membership.user.email).join(", ") || "Not assigned"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <TeamManagerControl
+                      teamId={team.id}
+                      managerId={team.memberships.find((membership) => membership.role === "MANAGER")?.userId ?? ""}
+                      members={team.memberships
+                        .filter((membership) => membership.user.role !== "ADMIN")
+                        .map((membership) => ({
+                          id: membership.userId,
+                          label: membership.user.name || membership.user.email,
+                        }))}
+                    />
+                    <span className="badge-pill text-xs">{team._count.memberships} members · {team._count.projects} projects</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <p className="mt-4 text-sm text-slate-500">No teams have been created yet.</p>}
         </section>
 
         <section id="users" className="panel-card rounded-[30px] p-5 sm:p-7">

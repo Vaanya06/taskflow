@@ -7,6 +7,7 @@ import { accessibleProjectWhere } from "@/project-access";
 import DeleteProjectButton from "./delete-project-button";
 import LogoutButton from "./logout-button";
 import NewProjectForm from "./new-project-form";
+import TeamManagement from "./team-management";
 
 type DashboardTask = {
   id: string;
@@ -349,8 +350,8 @@ export default async function DashboardPage() {
   return (
     <WorkspaceShell
       title="Dashboard"
+      currentWorkspace="projects"
       navItems={[
-        { href: "/todos", label: "My tasks", icon: "home" },
         { href: "/dashboard", label: "Dashboard", icon: "dashboard", active: true },
         { href: "#projects", label: "Projects", icon: "folder", badge: String(projects.length) },
         { href: "#deadlines", label: "Deadlines", icon: "reports", badge: String(upcomingTasks.length) },
@@ -377,7 +378,7 @@ export default async function DashboardPage() {
                 A calmer way to see what needs love today.
               </h2>
               <p className="mt-5 max-w-2xl text-base leading-8 text-white/48">
-                Your dashboard now pulls together project health, personal workload, and deadline risk so the next move is easier to spot at a glance.
+                Track shared project progress, deadlines, and the project issues assigned to you. Personal to-dos stay separate in your task workspace.
               </p>
               <div className="mt-6 flex flex-wrap gap-3 text-sm text-white/60">
                 <span className="badge-pill">{projects.length} workspaces</span>
@@ -396,9 +397,9 @@ export default async function DashboardPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="panel-card-soft rounded-[28px] p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">Open tasks</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">Open project tasks</p>
                 <p className="mt-3 text-4xl font-semibold text-white/92">{openTasks}</p>
-                <p className="mt-2 text-sm text-white/38">Across every workspace you can access</p>
+                <p className="mt-2 text-sm text-white/38">Across the team projects you can access</p>
               </div>
               <div className="panel-card-soft rounded-[28px] p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">Due this week</p>
@@ -418,6 +419,8 @@ export default async function DashboardPage() {
             </div>
           </div>
         </section>
+
+        {user.role === "MANAGER" ? <TeamManagement /> : null}
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="panel-card-soft rounded-[28px] p-5">
@@ -559,8 +562,8 @@ export default async function DashboardPage() {
             <section className="panel-card rounded-[34px] p-6">
               <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">My queue</p>
-                  <p className="mt-2 text-sm text-white/42">The work currently resting on you.</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">My project queue</p>
+                  <p className="mt-2 text-sm text-white/42">Shared project issues assigned to you. Manage their status in the project.</p>
                 </div>
                 <span className="text-xs text-white/30">{assignedToMeOpen.length} open</span>
               </div>
@@ -580,7 +583,15 @@ export default async function DashboardPage() {
                       </div>
                       <div className="mt-3 flex items-center justify-between text-xs text-white/36">
                         <span>{task.status === "IN_PROGRESS" ? "In progress" : "Queued up"}</span>
-                        <span>{task.dueDate ? formatRelativeDueDate(task.dueDate) : "No due date"}</span>
+                        <span className="flex items-center gap-3">
+                          {task.dueDate ? formatRelativeDueDate(task.dueDate) : "No due date"}
+                          <Link
+                            href={`/projects/${task.projectId}`}
+                            className="font-semibold text-indigo-600 hover:text-indigo-800"
+                          >
+                            Open project
+                          </Link>
+                        </span>
                       </div>
                     </div>
                   ))}

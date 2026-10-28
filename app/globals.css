@@ -244,6 +244,37 @@ textarea {
   background: rgba(255, 255, 255, 0.92);
 }
 
+.workspace-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.8rem;
+  background: #f8fafc;
+  padding: 0.2rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.workspace-switcher a {
+  flex: 1;
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.workspace-switcher a:hover {
+  color: #3730a3;
+}
+
+.workspace-switcher .workspace-switcher-active {
+  background: #ffffff;
+  color: #4338ca;
+  box-shadow: 0 1px 3px rgba(30, 41, 59, 0.12);
+}
+
 .workspace-nav-item {
   display: flex;
   align-items: center;

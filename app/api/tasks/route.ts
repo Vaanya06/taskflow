@@ -6,6 +6,7 @@ import {
   listTasksByProject,
 } from "@/services/taskService";
 import { accessibleProjectWhere } from "@/project-access";
+import { canManageProjectTasks } from "@/lib/project-task-permissions";
 
 const ISSUE_TYPES = new Set(["EPIC", "STORY", "TASK", "BUG"]);
 const TASK_STATUSES = new Set(["TODO", "IN_PROGRESS", "DONE"]);
@@ -175,6 +176,11 @@ export async function POST(request: Request) {
           userId: true,
         },
       },
+      team: {
+        select: {
+          memberships: { select: { userId: true, role: true } },
+        },
+      },
     },
   });
 
@@ -188,7 +194,12 @@ export async function POST(request: Request) {
   const collaboratorIds = new Set([
     project.ownerId,
     ...project.members.map((member) => member.userId),
+    ...(project.team?.memberships.map((member) => member.userId) ?? []),
   ]);
+
+  if (!canManageProjectTasks(project, user.id, user.role)) {
+    return NextResponse.json({ ok: false, error: "Only project owners, project members, or the connected team manager can create issues." }, { status: 403 });
+  }
 
   if (assigneeId && !collaboratorIds.has(assigneeId)) {
     return NextResponse.json(

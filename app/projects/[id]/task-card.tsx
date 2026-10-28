@@ -60,6 +60,7 @@ type TaskCardProps = {
   sprints: Exclude<SprintOption, null>[];
   currentUserId: string;
   canDelete: boolean;
+  canManageTasks: boolean;
   projectLabels: TaskLabel[];
   onNotify?: (message: string, type?: NotificationType) => void;
 };
@@ -186,6 +187,7 @@ export default function TaskCard({
   sprints,
   currentUserId,
   canDelete,
+  canManageTasks,
   projectLabels,
   onNotify,
 }: TaskCardProps) {
@@ -212,7 +214,7 @@ export default function TaskCard({
   const dueMeta = getDueMeta(task.dueDate, task.status);
   const nextStatus = getNextStatus(task.status);
   const latestComment = task.comments[task.comments.length - 1];
-  const canAssignToSelf = members.some((member) => member.id === currentUserId);
+  const canAssignToSelf = canManageTasks && members.some((member) => member.id === currentUserId);
   const suggestedLabels = projectLabels.filter(
     (label) => !task.labels.some((taskLabel) => taskLabel.id === label.id),
   ).slice(0, 4);
@@ -501,7 +503,7 @@ export default function TaskCard({
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <button className="accent-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="button" onClick={handleAdvance} disabled={isPending}>
+          <button className="accent-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="button" onClick={handleAdvance} disabled={isPending || (!canManageTasks && task.assignee?.id !== currentUserId)}>
             {nextStatus.label}
           </button>
           {canAssignToSelf && task.assignee?.id !== currentUserId ? (
@@ -509,14 +511,16 @@ export default function TaskCard({
               Assign to me
             </button>
           ) : null}
-          {task.assignee?.id === currentUserId ? (
+          {canManageTasks && task.assignee?.id === currentUserId ? (
             <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={handleUnassign} disabled={isPending}>
               Release
             </button>
           ) : null}
-          <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={() => setIsEditing(true)} disabled={isPending}>
-            Edit
-          </button>
+          {canManageTasks ? (
+            <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={() => setIsEditing(true)} disabled={isPending}>
+              Edit
+            </button>
+          ) : null}
           {canDelete ? (
             <button className="flex h-9 items-center rounded-full border border-red-500/20 bg-red-500/5 px-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-300 transition hover:bg-red-500/10 disabled:opacity-50" type="button" onClick={handleDelete} disabled={isPending}>
               Delete
@@ -560,13 +564,15 @@ export default function TaskCard({
           {task.labels.length ? task.labels.map((label) => (
             <span key={label.id} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium" style={{ borderColor: label.color ?? "#3f3f46", color: label.color ?? "#d4d4d8", backgroundColor: label.color ? `${label.color}20` : "rgba(255,255,255,0.04)" }}>
               {label.name}
-              <button type="button" className="rounded-full bg-black/20 px-1.5 py-0.5 text-[10px]" onClick={() => handleRemoveLabel(label)}>
-                x
-              </button>
+              {canManageTasks ? (
+                <button type="button" className="rounded-full bg-black/20 px-1.5 py-0.5 text-[10px]" onClick={() => handleRemoveLabel(label)}>
+                  x
+                </button>
+              ) : null}
             </span>
           )) : <span className="text-xs text-white/28">No labels yet.</span>}
         </div>
-        {suggestedLabels.length ? (
+        {canManageTasks && suggestedLabels.length ? (
           <div className="mt-3 flex flex-wrap gap-2">
             {suggestedLabels.map((label) => (
               <button key={label.id} type="button" onClick={() => handleAddLabel({ labelId: label.id }, `Added ${label.name}.`)} className="badge-pill px-3 py-1.5 text-[11px] hover:text-white">
@@ -575,13 +581,13 @@ export default function TaskCard({
             ))}
           </div>
         ) : null}
-        <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={handleCreateLabel}>
+        {canManageTasks ? <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={handleCreateLabel}>
           <input className="soft-input h-10 min-w-[180px] flex-1 rounded-2xl px-4 text-sm" placeholder="Create label" value={labelName} onChange={(event) => setLabelName(event.target.value)} />
           <input className="h-10 w-12 rounded-2xl border border-white/10 bg-white/5" type="color" value={labelColor} onChange={(event) => setLabelColor(event.target.value)} aria-label="Label color" />
           <button className="secondary-button flex h-10 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="submit" disabled={isPending}>
             Add label
           </button>
-        </form>
+        </form> : null}
         {labelError ? <p className="mt-2 text-xs text-red-300">{labelError}</p> : null}
       </div>
 

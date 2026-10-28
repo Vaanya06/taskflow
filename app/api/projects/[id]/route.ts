@@ -44,6 +44,11 @@ export async function DELETE(
           userId: true,
         },
       },
+      team: {
+        select: {
+          memberships: { select: { userId: true } },
+        },
+      },
     },
   });
 
@@ -79,6 +84,7 @@ export async function DELETE(
     const userIdsToInvalidate = new Set([
       user.id,
       ...project.members.map((member) => member.userId),
+      ...(project.team?.memberships.map((member) => member.userId) ?? []),
     ]);
 
     await Promise.all(

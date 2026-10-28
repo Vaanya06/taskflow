@@ -25,6 +25,8 @@ model User {
   createdTodoTasks TodoTask[]           @relation("TodoTaskCreator")
   todoMyDayEntries TodoMyDayEntry[]
   inboxList        TodoList?            @relation("TodoInboxOwner")
+  teamsCreated     Team[]               @relation("TeamCreator")
+  teamMemberships  TeamMembership[]
 }
 
 model Session {
@@ -42,11 +44,15 @@ model Project {
   description String?
   createdAt   DateTime     @default(now())
   ownerId     String
+  teamId      String?
   members     Membership[]
   owner       User         @relation(fields: [ownerId], references: [id])
+  team        Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
   sprints     Sprint[]
   tasks       Task[]
   activities  Activity[]
+
+  @@index([teamId])
 }
 
 model Task {
@@ -135,6 +141,31 @@ model Membership {
   user      User    @relation(fields: [userId], references: [id])
 
   @@unique([userId, projectId])
+}
+
+model Team {
+  id          String           @id @default(uuid())
+  name        String
+  createdAt   DateTime         @default(now())
+  createdById String
+  createdBy   User             @relation("TeamCreator", fields: [createdById], references: [id])
+  memberships TeamMembership[]
+  projects    Project[]
+
+  @@index([createdById])
+}
+
+model TeamMembership {
+  id        String   @id @default(uuid())
+  role      TeamRole @default(MEMBER)
+  createdAt DateTime @default(now())
+  teamId    String
+  userId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId, role])
 }
 
 model TodoList {
@@ -237,8 +268,14 @@ enum Role {
   MEMBER
 }
 
+enum TeamRole {
+  MANAGER
+  MEMBER
+}
+
 enum UserRole {
   USER
+  MANAGER
   ADMIN
 }
 

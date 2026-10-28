@@ -68,6 +68,7 @@ type TaskBoardProps = {
   sprints: SprintOption[];
   currentUserId: string;
   canDeleteTasks: boolean;
+  canManageTasks: boolean;
 };
 
 type NotificationType = "success" | "error" | "info";
@@ -214,6 +215,7 @@ export default function TaskBoard({
   sprints,
   currentUserId,
   canDeleteTasks,
+  canManageTasks,
 }: TaskBoardProps) {
   const router = useRouter();
   const notificationIdRef = useRef(0);
@@ -457,7 +459,13 @@ export default function TaskBoard({
 
   return (
     <section className="flex flex-col gap-6">
-      <NewTaskForm projectId={projectId} members={members} sprints={sprints} onNotify={pushNotification} />
+      {canManageTasks ? (
+        <NewTaskForm projectId={projectId} members={members} sprints={sprints} onNotify={pushNotification} />
+      ) : (
+        <p className="panel-card-soft rounded-[24px] px-5 py-4 text-sm text-white/48">
+          Update the status of issues assigned to you. Contact your team manager to create or assign work.
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="panel-card-soft rounded-[28px] p-5"><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">Issues completed</p><p className="mt-3 text-3xl font-semibold text-white/92">{completedThisWeek}</p><p className="mt-2 text-sm text-white/38">This week</p></div>
@@ -552,8 +560,8 @@ export default function TaskBoard({
                 </div>
                 <div className={`flex min-h-[120px] flex-col gap-4 rounded-[28px] border border-dashed p-3 transition ${isActiveDrop ? "border-[var(--accent)]/30 bg-[rgba(62,214,177,0.08)]" : "border-white/[0.1] bg-[rgba(7,18,25,0.36)]"}`} onDragOver={(event) => handleDragOver(event, column.status)} onDragLeave={() => setDragOverStatus(null)} onDrop={(event) => handleDrop(event, column.status)}>
                   {columnTasks.length ? columnTasks.map((task) => (
-                    <div key={task.id} draggable onDragStart={(event) => handleDragStart(event, task.id)} onDragEnd={handleDragEnd} className={draggingId === task.id ? "opacity-60" : undefined}>
-                      <TaskCard task={task} members={members} sprints={sprints} currentUserId={currentUserId} canDelete={canDeleteTasks} projectLabels={projectLabels} onNotify={pushNotification} />
+                    <div key={task.id} draggable={canManageTasks || task.assignee?.id === currentUserId} onDragStart={(event) => handleDragStart(event, task.id)} onDragEnd={handleDragEnd} className={draggingId === task.id ? "opacity-60" : undefined}>
+                      <TaskCard task={task} members={members} sprints={sprints} currentUserId={currentUserId} canDelete={canDeleteTasks} canManageTasks={canManageTasks} projectLabels={projectLabels} onNotify={pushNotification} />
                     </div>
                   )) : <div className="rounded-[24px] border border-dashed border-white/[0.1] bg-white/[0.03] p-6 text-sm text-white/28">No issues here yet. Drag an issue to update its status.</div>}
                 </div>
@@ -584,7 +592,7 @@ export default function TaskBoard({
             </div>
           </div>
           <div className="flex flex-col gap-4">
-            {selectedTask ? <TaskCard task={selectedTask} members={members} sprints={sprints} currentUserId={currentUserId} canDelete={canDeleteTasks} projectLabels={projectLabels} onNotify={pushNotification} /> : <div className="panel-card-soft rounded-[28px] p-6 text-sm text-white/32">Choose an issue to inspect it here.</div>}
+            {selectedTask ? <TaskCard task={selectedTask} members={members} sprints={sprints} currentUserId={currentUserId} canDelete={canDeleteTasks} canManageTasks={canManageTasks} projectLabels={projectLabels} onNotify={pushNotification} /> : <div className="panel-card-soft rounded-[28px] p-6 text-sm text-white/32">Choose an issue to inspect it here.</div>}
           </div>
         </div>
       )}

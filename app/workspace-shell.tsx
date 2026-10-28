@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { WorkspaceSwitcher } from "@/app/workspace-switcher";
 
 export type WorkspaceNavItem = {
   href: string;
@@ -18,6 +19,7 @@ export type WorkspaceNavItem = {
 
 type WorkspaceShellProps = {
   title: string;
+  currentWorkspace: "personal" | "projects";
   navItems: WorkspaceNavItem[];
   userName: string;
   userEmail: string;
@@ -86,6 +88,7 @@ function ShellIcon({ icon }: { icon: WorkspaceNavItem["icon"] }) {
 
 export function WorkspaceShell({
   title,
+  currentWorkspace,
   navItems,
   userName,
   userEmail,
@@ -122,6 +125,10 @@ export function WorkspaceShell({
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-soft" />
             Live
           </span>
+        </div>
+
+        <div className="relative px-3 pt-4">
+          <WorkspaceSwitcher current={currentWorkspace} />
         </div>
 
         <div className="relative px-4 pt-4">
