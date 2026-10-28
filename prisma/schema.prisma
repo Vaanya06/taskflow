@@ -7,19 +7,24 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(uuid())
-  name        String?
-  email       String       @unique
-  password    String?
-  role        UserRole     @default(USER)
-  avatar      String?
-  createdAt   DateTime     @default(now())
-  comments    Comment[]
-  activities  Activity[]
-  memberships Membership[]
-  projects    Project[]
-  sessions    Session[]
-  tasks       Task[]       @relation("AssignedTasks")
+  id               String               @id @default(uuid())
+  name             String?
+  email            String               @unique
+  password         String?
+  role             UserRole             @default(USER)
+  avatar           String?
+  createdAt        DateTime             @default(now())
+  comments         Comment[]
+  activities       Activity[]
+  memberships      Membership[]
+  projects         Project[]
+  sessions         Session[]
+  tasks            Task[]               @relation("AssignedTasks")
+  todoLists        TodoList[]           @relation("TodoListOwner")
+  todoMemberships  TodoListMembership[]
+  createdTodoTasks TodoTask[]           @relation("TodoTaskCreator")
+  todoMyDayEntries TodoMyDayEntry[]
+  inboxList        TodoList?            @relation("TodoInboxOwner")
 }
 
 model Session {
@@ -67,32 +72,32 @@ model Task {
 }
 
 model Sprint {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   title     String
   goal      String?
   startDate DateTime?
   endDate   DateTime?
-  isActive  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isActive  Boolean   @default(false)
+  createdAt DateTime  @default(now())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks     Task[]
 }
 
 model Activity {
-  id        String        @id @default(uuid())
+  id        String       @id @default(uuid())
   type      ActivityType
   message   String
-  createdAt DateTime      @default(now())
+  createdAt DateTime     @default(now())
 
-  userId    String
-  user      User          @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   projectId String?
-  project   Project?      @relation(fields: [projectId], references: [id])
+  project   Project? @relation(fields: [projectId], references: [id])
 
-  taskId    String?
-  task      Task?         @relation(fields: [taskId], references: [id])
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id])
 }
 
 model Comment {
@@ -132,6 +137,82 @@ model Membership {
   @@unique([userId, projectId])
 }
 
+model TodoList {
+  id           String               @id @default(uuid())
+  name         String
+  isInbox      Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  ownerId      String
+  inboxOwnerId String?              @unique
+  owner        User                 @relation("TodoListOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  inboxOwner   User?                @relation("TodoInboxOwner", fields: [inboxOwnerId], references: [id], onDelete: Cascade)
+  memberships  TodoListMembership[]
+  tasks        TodoTask[]
+
+  @@index([ownerId])
+}
+
+model TodoListMembership {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  listId    String
+  userId    String
+  list      TodoList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, userId])
+  @@index([userId])
+}
+
+model TodoTask {
+  id           String           @id @default(uuid())
+  title        String
+  note         String?
+  isCompleted  Boolean          @default(false)
+  important    Boolean          @default(false)
+  dueDate      DateTime?
+  reminderAt   DateTime?
+  repeat       TodoRepeat?
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  listId       String
+  creatorId    String
+  list         TodoList         @relation(fields: [listId], references: [id], onDelete: Cascade)
+  creator      User             @relation("TodoTaskCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  steps        TodoTaskStep[]
+  myDayEntries TodoMyDayEntry[]
+
+  @@index([listId, dueDate])
+  @@index([listId, isCompleted])
+}
+
+model TodoMyDayEntry {
+  id        String   @id @default(uuid())
+  date      DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  taskId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task      TodoTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+  @@index([userId, date])
+  @@index([taskId])
+}
+
+model TodoTaskStep {
+  id          String   @id @default(uuid())
+  title       String
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  taskId      String
+  task        TodoTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -159,6 +240,13 @@ enum Role {
 enum UserRole {
   USER
   ADMIN
+}
+
+enum TodoRepeat {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
 }
 
 enum ActivityType {

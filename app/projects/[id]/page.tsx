@@ -395,6 +395,7 @@ export default async function ProjectPage({ params }: PageProps) {
     <WorkspaceShell
       title="Project Workspace"
       navItems={[
+        { href: "/todos", label: "My tasks", icon: "home" },
         { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
         { href: "#overview", label: "Overview", icon: "folder" },
         {

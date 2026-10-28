@@ -350,6 +350,7 @@ export default async function DashboardPage() {
     <WorkspaceShell
       title="Dashboard"
       navItems={[
+        { href: "/todos", label: "My tasks", icon: "home" },
         { href: "/dashboard", label: "Dashboard", icon: "dashboard", active: true },
         { href: "#projects", label: "Projects", icon: "folder", badge: String(projects.length) },
         { href: "#deadlines", label: "Deadlines", icon: "reports", badge: String(upcomingTasks.length) },

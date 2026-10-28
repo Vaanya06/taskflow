@@ -48,6 +48,7 @@ export default async function AdminPage() {
     <WorkspaceShell
       title="Admin"
       navItems={[
+        { href: "/todos", label: "My tasks", icon: "home" },
         { href: "/admin", label: "Overview", icon: "dashboard", active: true },
         { href: "#users", label: "Users", icon: "team", badge: String(userCount) },
         { href: "#projects", label: "Projects", icon: "folder", badge: String(projectCount) },

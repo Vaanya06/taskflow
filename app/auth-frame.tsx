@@ -32,13 +32,13 @@ export function AuthFrame({
   children,
 }: AuthFrameProps) {
   return (
-    <main className="min-h-screen px-6 py-10 text-white">
-      <div className="mx-auto grid max-w-6xl overflow-hidden rounded-[32px] border border-white/[0.08] bg-[rgba(7,18,25,0.7)] shadow-[0_32px_120px_rgba(3,11,16,0.34)] backdrop-blur lg:grid-cols-[0.95fr_1.05fr]">
+    <main className="auth-theme px-6 py-10">
+      <div className="auth-card mx-auto grid max-w-6xl overflow-hidden rounded-[32px] border border-white/[0.08] shadow-[0_24px_64px_rgba(30,41,59,0.09)] backdrop-blur lg:grid-cols-[0.95fr_1.05fr]">
         <section className="panel-card hidden rounded-none border-0 border-r border-white/[0.08] p-8 lg:flex lg:flex-col">
           <div className="surface-grid absolute inset-0 opacity-[0.08]" />
           <div>
             <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold text-white">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(62,214,177,0.95),rgba(127,211,247,0.82))] text-[#05231d] shadow-[0_18px_34px_rgba(62,214,177,0.22)]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(99,102,241,0.95),rgba(167,139,250,0.82))] text-white shadow-[0_18px_34px_rgba(99,102,241,0.2)]">
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <rect x="1" y="1" width="5" height="5" rx="1.5" fill="currentColor" />
                   <rect x="8" y="1" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.68" />

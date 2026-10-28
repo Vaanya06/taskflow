@@ -28,7 +28,7 @@ export default function RegisterForm() {
 
     if (response.ok) {
       startTransition(() => {
-        router.push(adminSetupToken ? "/admin" : "/dashboard");
+        router.push(adminSetupToken ? "/admin" : "/todos");
         router.refresh();
       });
       return;

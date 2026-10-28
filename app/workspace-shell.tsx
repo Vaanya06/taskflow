@@ -96,13 +96,13 @@ export function WorkspaceShell({
   const initials = (userName || userEmail || "U").slice(0, 2).toUpperCase();
 
   return (
-    <div className="flex min-h-screen flex-col overflow-hidden bg-[#081218] text-white lg:flex-row">
-      <aside className="relative flex w-full shrink-0 flex-col overflow-hidden border-b border-white/[0.08] bg-[rgba(7,18,25,0.86)] lg:w-[250px] lg:border-b-0 lg:border-r">
+    <div className="workspace-theme flex min-h-screen flex-col overflow-hidden lg:flex-row">
+      <aside className="workspace-sidebar relative flex w-full shrink-0 flex-col overflow-hidden border-b lg:w-[250px] lg:border-b-0 lg:border-r">
         <div className="pointer-events-none absolute inset-0 surface-grid opacity-[0.12]" />
 
         <div className="relative flex h-16 items-center justify-between border-b border-white/[0.08] px-4">
           <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold text-white">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(62,214,177,0.95),rgba(127,211,247,0.85))] text-[#05231d] shadow-[0_16px_32px_rgba(62,214,177,0.22)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(99,102,241,0.95),rgba(167,139,250,0.85))] text-white shadow-[0_16px_32px_rgba(99,102,241,0.2)]">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <rect x="1" y="1" width="5" height="5" rx="1.5" fill="currentColor" />
                 <rect x="8" y="1" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.68" />
@@ -135,17 +135,15 @@ export function WorkspaceShell({
             <Link
               key={`${item.label}-${item.href}`}
               href={item.href}
-              className={`group flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm transition ${
-                item.active
-                  ? "border-[#8eead4]/20 bg-[linear-gradient(135deg,rgba(62,214,177,0.2),rgba(127,211,247,0.08))] text-white shadow-[0_18px_40px_rgba(7,18,25,0.18)]"
-                  : "border-transparent text-white/48 hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-white/80"
+              className={`workspace-nav-item group ${
+                item.active ? "workspace-nav-active" : ""
               }`}
             >
               <span
                 className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl ${
                   item.active
-                    ? "bg-black/20 text-[var(--accent)]"
-                    : "bg-white/[0.04] text-white/55 group-hover:bg-white/[0.07]"
+                    ? "bg-indigo-100 text-indigo-700"
+                    : "bg-slate-100 text-slate-500 group-hover:bg-indigo-50"
                 }`}
               >
                 <ShellIcon icon={item.icon} />
@@ -190,7 +188,7 @@ export function WorkspaceShell({
       </aside>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <header className="relative z-30 flex min-h-16 shrink-0 flex-col gap-3 border-b border-white/[0.08] bg-[rgba(7,18,25,0.76)] px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <header className="workspace-topbar relative z-30 flex min-h-16 shrink-0 flex-col gap-3 border-b px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/28">
               Workspace view

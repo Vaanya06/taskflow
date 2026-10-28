@@ -3,72 +3,72 @@ import { getCurrentUser } from "@/lib/auth";
 
 const features = [
   {
-    title: "Playful project rooms",
-    description: "Projects feel alive with pulse cards, progress bars, and clearer status cues instead of flat tables.",
+    title: "A day with room to breathe",
+    description: "Choose what belongs in My Day, keep the rest in your lists, and finish without losing sight of tomorrow.",
   },
   {
-    title: "Sharper board flow",
-    description: "Switch between board lanes and a focused agenda view so drag-and-drop and deeper review can coexist.",
+    title: "Small steps, steady progress",
+    description: "Add notes, due dates, reminders, repeat schedules, and checkable steps to the tasks that need more detail.",
   },
   {
-    title: "Signals that matter",
-    description: "Overdue work, sprint scope, ownership, and fresh comments stay visible before they become blockers.",
+    title: "Lists that work together",
+    description: "Keep personal lists private or share one with another Taskflow user. Your project workspaces stay separate.",
   },
 ];
 
 const rituals = [
   {
-    title: "Start with momentum",
-    detail: "Open the dashboard, scan your queue, and spot risk in under a minute.",
+    title: "Capture it quickly",
+    detail: "Drop a thought into your Inbox before it slips away, then organize it when you are ready.",
   },
   {
-    title: "Shape the sprint",
-    detail: "Use backlog previews, story points, and active-sprint highlights to pull work with more confidence.",
+    title: "Make today yours",
+    detail: "Bring a few tasks into My Day and keep your focus on what matters right now.",
   },
   {
-    title: "Close the loop",
-    detail: "Comments, labels, and completion cues give every task a cleaner finish line.",
+    title: "Build a gentle rhythm",
+    detail: "Set a reminder, repeat a routine, or break a larger task into smaller steps.",
   },
 ];
 
 const workflowSteps = [
-  ["01", "Create a workspace", "Spin up a project room for the workstream, launch, or client effort you want to coordinate."],
-  ["02", "Plan the board", "Capture issues, drop them into a sprint, and slice the view by priority, due date, teammate, or label."],
-  ["03", "Keep the rhythm", "Move work forward, comment in context, and use the activity timeline to keep everyone aligned."],
+  ["01", "Capture", "Add a task to your Inbox or the list that fits it."],
+  ["02", "Choose", "Set a date, add a reminder, or place it in My Day."],
+  ["03", "Make progress", "Take one step at a time, and let recurring tasks handle the routines."],
 ] as const;
 
 const faqItems = [
   {
-    question: "What kind of team is Taskflow best for?",
-    answer: "Taskflow works well for small teams that want project clarity without giving up the speed of a lightweight board.",
+    question: "What is Taskflow for?",
+    answer: "Taskflow helps you organize everyday tasks with a focused day view, flexible lists, reminders, and recurring routines.",
   },
   {
-    question: "Can I manage both backlog planning and active sprint work?",
-    answer: "Yes. The workspace now highlights backlog candidates, active sprint scope, deadlines, and a more focused agenda view side by side.",
+    question: "Can I share a list?",
+    answer: "Yes. List owners can share lists with other Taskflow accounts and remove access when it is no longer needed.",
   },
   {
-    question: "Does it support collaboration beyond just moving tasks?",
-    answer: "Yes. Members, comments, labels, and project activity all stay tied to the task context so updates are easier to follow.",
+    question: "What happens to project workspaces?",
+    answer: "Projects remain available separately, so team boards and sprints do not get mixed into your personal task lists.",
   },
   {
     question: "How quickly can I get started?",
-    answer: "Create an account, create a workspace, and start capturing tasks right away. The board, dashboards, and quick views are ready immediately.",
+    answer: "Create an account and add your first task. Your Inbox and My Day are ready from the start.",
   },
 ];
 
 export default async function Home() {
   const user = await getCurrentUser();
-  const primaryHref = user ? (user.role === "ADMIN" ? "/admin" : "/dashboard") : "/register";
-  const primaryLabel = user ? "Open dashboard" : "Create account";
-  const secondaryHref = user ? (user.role === "ADMIN" ? "/admin" : "/dashboard") : "/login";
-  const secondaryLabel = user ? "Review projects" : "Sign in";
+  const primaryHref = user ? (user.role === "ADMIN" ? "/admin" : "/todos") : "/register";
+  const primaryLabel = user ? "Open tasks" : "Create account";
+  const secondaryHref = user ? "/dashboard" : "/login";
+  const secondaryLabel = user ? "Open projects" : "Sign in";
 
   return (
-    <main className="min-h-screen text-white">
-      <header className="sticky top-0 z-20 border-b border-white/[0.08] bg-[rgba(7,18,25,0.78)] backdrop-blur">
+    <main className="home-theme">
+      <header className="home-header sticky top-0 z-20 border-b backdrop-blur">
         <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-6 py-4">
           <Link href="/" className="flex items-center gap-3 text-sm font-semibold text-white">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(62,214,177,0.95),rgba(127,211,247,0.84))] text-[#05231d] shadow-[0_18px_34px_rgba(62,214,177,0.22)]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(99,102,241,0.95),rgba(167,139,250,0.84))] text-white shadow-[0_18px_34px_rgba(99,102,241,0.2)]">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <rect x="1" y="1" width="5" height="5" rx="1.5" fill="currentColor" />
                 <rect x="8" y="1" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.68" />
@@ -102,12 +102,12 @@ export default async function Home() {
       <section className="px-6 pb-16 pt-14 sm:pb-20 sm:pt-18">
         <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div>
-            <p className="section-kicker">A brighter team workspace</p>
+            <p className="section-kicker">A calmer way to keep track</p>
             <h1 className="display-font mt-5 max-w-4xl text-6xl leading-[0.96] text-white/96 sm:text-7xl">
-              Project tracking with more spark, less sludge.
+              Make space for what matters today.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-white/50 sm:text-lg">
-              Taskflow now leans into clearer signals, richer board views, and friendlier momentum cues so planning and execution feel faster to scan and more fun to use.
+              Gather the little things and the big things in one gentle flow. Plan your day, build routines, and make progress at your own pace.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -115,14 +115,14 @@ export default async function Home() {
                 {primaryLabel}
               </Link>
               <Link href="#features" className="secondary-button flex h-12 items-center justify-center px-6 text-sm font-semibold uppercase tracking-[0.18em]">
-                Explore the workspace
+                See how it works
               </Link>
             </div>
 
             <div className="mt-8 flex flex-wrap gap-3 text-sm text-white/58">
-              <span className="badge-pill">Interactive board views</span>
-              <span className="badge-pill">Sprint-aware planning</span>
-              <span className="badge-pill">Cleaner task details</span>
+              <span className="badge-pill">A focused My Day</span>
+              <span className="badge-pill">Lists you can share</span>
+              <span className="badge-pill">Routines that repeat</span>
             </div>
           </div>
 
@@ -131,7 +131,7 @@ export default async function Home() {
             <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Live preview</p>
-                <p className="mt-1 text-sm text-white/42">A workspace that feels more like a control room.</p>
+                <p className="mt-1 text-sm text-white/42">A softer place to land your next few tasks.</p>
               </div>
               <span className="badge-pill text-[10px] font-semibold text-[var(--accent)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-soft" />
@@ -141,16 +141,21 @@ export default async function Home() {
 
             <div className="mt-6 grid gap-4">
               <div className="panel-card-soft rounded-[28px] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">Flow cues</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">My Day · 3 tasks</p>
                 <div className="mt-4 grid gap-3">
                   {[
-                    ["Sprint pulse", "7 issues / 18 points"],
-                    ["Attention", "2 overdue / 4 due soon"],
-                    ["Momentum", "5 completed this week"],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-[22px] border border-white/[0.08] bg-white/[0.04] px-4 py-3">
-                      <p className="text-xs text-white/34">{label}</p>
-                      <p className="mt-1 text-sm font-semibold text-white/86">{value}</p>
+                    ["Reply to the note", "Today"],
+                    ["Pick up groceries", "Today"],
+                    ["A short walk", "Every day"],
+                  ].map(([title, detail], index) => (
+                    <div key={title} className="flex items-center gap-3 rounded-[22px] border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full border border-white/25 text-[var(--accent)]">
+                        {index === 0 ? <span className="h-2 w-2 rounded-full bg-[var(--accent)]" /> : null}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-white/86">{title}</span>
+                        <span className="mt-1 block text-xs text-white/34">{detail}</span>
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -158,25 +163,16 @@ export default async function Home() {
 
               <div className="grid gap-4">
                 <div className="panel-card-soft rounded-[28px] p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">Board pulse</p>
-                    <span className="text-[11px] text-white/34">Agenda + lanes</span>
-                  </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/28">Keep it simple</p>
+                  <div className="mt-4 grid gap-3">
                     {[
-                      ["Todo", ["Pricing review", "QA follow-ups"]],
-                      ["In progress", ["Landing polish", "Billing bug"]],
-                      ["Done", ["New queue card", "Activity refresh"]],
-                    ].map(([label, items]) => (
-                      <div key={label as string} className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] p-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/28">{label}</p>
-                        <div className="mt-3 grid gap-2">
-                          {(items as string[]).map((item) => (
-                            <div key={item} className="rounded-2xl border border-white/[0.08] bg-[rgba(7,18,25,0.42)] px-3 py-2 text-xs text-white/70">
-                              {item}
-                            </div>
-                          ))}
-                        </div>
+                      ["Inbox", "Collect the things on your mind"],
+                      ["Home", "Keep everyday life in one place"],
+                      ["Shared", "Make plans together"],
+                    ].map(([label, note]) => (
+                      <div key={label} className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+                        <span className="text-sm font-semibold text-white/78">{label}</span>
+                        <span className="text-right text-xs text-white/38">{note}</span>
                       </div>
                     ))}
                   </div>
@@ -184,9 +180,9 @@ export default async function Home() {
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   {[
-                    ["Projects", "Structured"],
-                    ["Board", "Playable"],
-                    ["Updates", "Visible"],
+                    ["My Day", "Focused"],
+                    ["Routines", "Steady"],
+                    ["Lists", "Shared"],
                   ].map(([label, value]) => (
                     <div key={label} className="panel-card-soft rounded-[24px] p-4">
                       <p className="text-[11px] uppercase tracking-[0.2em] text-white/28">{label}</p>
@@ -203,12 +199,12 @@ export default async function Home() {
       <section id="features" className="px-6 pb-16 sm:pb-20">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-2xl">
-            <p className="section-kicker">Built for momentum</p>
+            <p className="section-kicker">A little structure, no pressure</p>
             <h2 className="display-font mt-4 text-5xl leading-[1.02] text-white/94">
-              One system for planning, flow, and daily signal.
+              Everything you need to keep a thoughtful day moving.
             </h2>
             <p className="mt-4 text-sm leading-7 text-white/48 sm:text-base">
-              The refreshed experience keeps the dark control-room feel, but adds more warmth, better hierarchy, and interactive surfaces where the work actually happens.
+              Start with a simple list. Add just enough detail to help future-you follow through.
             </p>
           </div>
 
@@ -226,7 +222,7 @@ export default async function Home() {
 
           <div className="mt-6 grid gap-4 lg:grid-cols-[1.04fr_0.96fr]">
             <div className="panel-card rounded-[32px] p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">What changed</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">A rhythm that fits you</p>
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 {rituals.map((ritual) => (
                   <div key={ritual.title} className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] p-4">
@@ -238,15 +234,15 @@ export default async function Home() {
             </div>
 
             <div className="panel-card-soft rounded-[32px] p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Why it feels lighter</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Keep team projects in their place</p>
               <p className="mt-4 text-sm leading-7 text-white/46">
-                A stronger visual rhythm means fewer moments hunting for the next thing to do. The dashboard calls out your queue, the project workspace exposes sprint health, and task cards give labels and comments more breathing room.
+                Personal tasks have a quiet home of their own. Your existing project boards and sprints are still there when it is time to work with your team.
               </p>
               <div className="mt-5 grid gap-3">
                 {[
-                  "Agenda view for focused review",
-                  "Task composer templates and quick due dates",
-                  "Reusable labels you can add or remove without friction",
+                  "My Day for a clear daily focus",
+                  "Flexible lists for personal routines",
+                  "Projects stay available separately",
                 ].map((item) => (
                   <div key={item} className="badge-pill justify-between rounded-[22px] px-4 py-3 text-sm text-white/66">
                     {item}
@@ -264,7 +260,7 @@ export default async function Home() {
           <div className="max-w-2xl">
             <p className="section-kicker">Workflow</p>
             <h2 className="display-font mt-4 text-5xl leading-[1.04] text-white/94">
-              Create, shape, move, and close the loop from one workspace.
+              A simple loop: capture, choose, and carry on.
             </h2>
           </div>
           <div className="mt-8 grid gap-4 md:grid-cols-3">

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: "%s | Taskflow",
   },
   description:
-    "Taskflow helps you organize projects, move work across a calm board, and keep priorities, comments, and progress in one place.",
+    "Taskflow helps you plan your day, organize personal tasks, build routines, and collaborate on team projects.",
 };
 
 export default function RootLayout({

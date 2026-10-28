@@ -28,7 +28,16 @@ npx prisma generate
 npm run dev
 ```
 
-Regular accounts have the `USER` role and use the project dashboard. To create the first administrator, configure both `ADMIN_EMAIL` and a long random `ADMIN_BOOTSTRAP_TOKEN` in `.env`, then register or sign in using that email and submit the token under **Admin account setup**. Keep the token private and remove it from the environment after setup. Admins can view all users and projects and manage account roles; project-level `OWNER`/`MEMBER` permissions remain separate, and project changes remain restricted to project owners and members.
+Regular accounts have the `USER` role and land in the personal task workspace at `/todos`. It includes My Day and suggestions, private or shared lists, task notes, due dates, browser reminders, repeating tasks, steps, importance, and search. Desktop reminders are delivered while Taskflow is open and browser notifications are enabled. Team projects and sprints remain available separately at `/dashboard`.
+
+The personal task workspace requires the `20261028131000_add_personal_todo_workspace` migration. Apply database changes and regenerate Prisma Client after pulling schema changes:
+
+```bash
+npx prisma migrate deploy
+npx prisma generate
+```
+
+To create the first administrator, configure both `ADMIN_EMAIL` and a long random `ADMIN_BOOTSTRAP_TOKEN` in `.env`, then register or sign in using that email and submit the token under **Admin account setup**. Keep the token private and remove it from the environment after setup. Admins can view all users and projects and manage account roles; project-level `OWNER`/`MEMBER` permissions remain separate, and project changes remain restricted to project owners and members.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
