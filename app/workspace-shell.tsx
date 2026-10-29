@@ -174,9 +174,12 @@ export function WorkspaceShell({
         <div className="relative mx-3 mb-3 mt-auto rounded-[24px] border border-white/[0.08] bg-white/[0.04] p-4">
           <div className="pointer-events-none absolute inset-0 surface-grid opacity-[0.08]" />
           <div className="relative">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/28">
-              Signed in
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/28">
+                Signed in
+              </p>
+              <div className="flex items-center gap-2">{userAction}</div>
+            </div>
             <div className="mt-3 flex items-center gap-3">
               <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(62,214,177,0.18),rgba(127,211,247,0.22))] text-xs font-semibold text-[var(--accent)]">
                 {initials}
@@ -185,7 +188,6 @@ export function WorkspaceShell({
                 <p className="truncate text-sm font-semibold text-white/84">{userName}</p>
                 <p className="truncate text-xs text-white/36">{userEmail}</p>
               </div>
-              {userAction}
             </div>
             <p className="mt-4 text-xs leading-6 text-white/34">
               Boards, deadlines, and activity all stay in sync from here.

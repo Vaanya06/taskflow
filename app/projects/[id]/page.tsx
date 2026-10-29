@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { WorkspaceShell } from "@/app/workspace-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { accessibleProjectWhere } from "@/project-access";
+import { accessibleProjectWhere, accessibleTaskWhere } from "@/project-access";
 import LogoutButton from "@/app/dashboard/logout-button";
 import AddMemberForm from "./add-member-form";
 import AddSprintForm from "./add-sprint-form";
@@ -176,11 +176,24 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
       })
     : [];
 
+  const isProjectOwner = project.ownerId === user.id;
+  const isDirectProjectMember = project.members.some((member) => member.user.id === user.id);
+  const isTeamManager = user.role === "MANAGER" &&
+    project.team?.memberships.some(
+      (membership) => membership.userId === user.id && membership.role === "MANAGER",
+    ) === true;
+  const canManageProjectTasks = isProjectOwner || isDirectProjectMember || isTeamManager;
+
   const [tasks, activities] = await Promise.all([
     prisma.task.findMany({
-      where: {
-        projectId: project.id,
-      },
+      where: canManageProjectTasks
+        ? { projectId: project.id }
+        : {
+            AND: [
+              { projectId: project.id },
+              accessibleTaskWhere(user.id),
+            ],
+          },
       orderBy: {
         createdAt: "desc",
       },
@@ -359,13 +372,6 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
   );
   const projectProgress = getCompletion(totalTasks, doneTasks);
   const activeSprintProgress = getCompletion(activeSprintTasks.length, activeSprintDone);
-  const isProjectOwner = project.ownerId === user.id;
-  const isDirectProjectMember = project.members.some((member) => member.user.id === user.id);
-  const isTeamManager = user.role === "MANAGER" &&
-    project.team?.memberships.some(
-      (membership) => membership.userId === user.id && membership.role === "MANAGER",
-    ) === true;
-  const canManageProjectTasks = isProjectOwner || isDirectProjectMember || isTeamManager;
 
   const assignmentsByMember = new Map<string, { total: number; open: number }>();
   for (const task of tasks) {

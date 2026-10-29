@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
-import { createSession, SESSION_COOKIE } from "@/lib/auth";
+import { createSession, enforceAuthRateLimit, getClientIpAddress, isStrongPassword, isValidEmail, SESSION_COOKIE } from "@/lib/auth";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { validateAdminBootstrap } from "@/lib/admin-bootstrap";
 
@@ -20,6 +20,14 @@ export async function POST(request: Request) {
     payload = null;
   }
 
+  const ipAddress = getClientIpAddress(request.headers);
+  if (!enforceAuthRateLimit(`register:${ipAddress}`, 5, 60_000)) {
+    return NextResponse.json(
+      { ok: false, error: "Too many sign-up attempts. Please wait a minute and try again." },
+      { status: 429 },
+    );
+  }
+
   const name = typeof payload?.name === "string" ? payload.name.trim() : "";
   const email =
     typeof payload?.email === "string"
@@ -31,9 +39,9 @@ export async function POST(request: Request) {
       ? payload.adminSetupToken
       : "";
 
-  if (!email || !email.includes("@") || password.length < 8) {
+  if (!name || name.length < 2 || !isValidEmail(email) || !isStrongPassword(password)) {
     return NextResponse.json(
-      { ok: false, error: "Invalid registration details." },
+      { ok: false, error: "Use a valid name, a valid email, and a strong password (12+ chars with uppercase, lowercase, number, and symbol)." },
       { status: 400 },
     );
   }
@@ -76,7 +84,7 @@ export async function POST(request: Request) {
     const user = await prisma.user.create({
       data: {
         email,
-        name: name || null,
+        name,
         password: passwordHash,
         role,
       },

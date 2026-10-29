@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/app/workspace-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { accessibleProjectWhere } from "@/project-access";
+import { accessibleProjectWhere, accessibleTaskWhere } from "@/project-access";
 import DeleteProjectButton from "./delete-project-button";
 import LogoutButton from "./logout-button";
 import NewProjectForm from "./new-project-form";
@@ -197,9 +197,7 @@ export default async function DashboardPage() {
       },
     }),
     prisma.task.findMany({
-      where: {
-        project: accessibleProjectWhere(user.id),
-      },
+      where: accessibleTaskWhere(user.id),
       select: {
         id: true,
         title: true,

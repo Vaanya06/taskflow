@@ -484,7 +484,6 @@ export default function TodoWorkspace({
               <span className="block truncate text-sm font-semibold">{userName}</span>
               <span className="block truncate text-xs text-slate-500">{userEmail}</span>
             </span>
-            <button type="button" onClick={() => void logout()} className="text-xs text-slate-500 hover:text-slate-900" title="Sign out">↗</button>
           </div>
 
           <div className="mt-4 px-1">
@@ -542,6 +541,14 @@ export default function TodoWorkspace({
 
           <div className="mt-auto pt-8">
             <p className="px-3 pt-5 text-[11px] leading-5 text-slate-400">Small steps count. Keep today kind and doable.</p>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="mt-4 flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-white hover:text-indigo-700"
+              title="Sign out"
+            >
+              Logout
+            </button>
           </div>
         </aside>
 

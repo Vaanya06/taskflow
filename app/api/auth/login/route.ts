@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
-import { createSession, SESSION_COOKIE } from "@/lib/auth";
+import { createSession, enforceAuthRateLimit, getClientIpAddress, isValidEmail, SESSION_COOKIE } from "@/lib/auth";
 import { isDatabaseConnectionError } from "@/lib/database-errors";
 import { validateAdminBootstrap } from "@/lib/admin-bootstrap";
 
@@ -19,6 +19,14 @@ export async function POST(request: Request) {
     payload = null;
   }
 
+  const ipAddress = getClientIpAddress(request.headers);
+  if (!enforceAuthRateLimit(`login:${ipAddress}`, 8, 60_000)) {
+    return NextResponse.json(
+      { ok: false, error: "Too many login attempts. Please wait a minute and try again." },
+      { status: 429 },
+    );
+  }
+
   const email =
     typeof payload?.email === "string"
       ? payload.email.trim().toLowerCase()
@@ -29,7 +37,7 @@ export async function POST(request: Request) {
       ? payload.adminSetupToken
       : "";
 
-  if (!email || !password) {
+  if (!email || !isValidEmail(email) || !password) {
     return NextResponse.json(
       { ok: false, error: "Invalid email or password." },
       { status: 400 },

@@ -31,19 +31,9 @@ export default function LogoutButton() {
         onClick={handleLogout}
         disabled={isPending}
         aria-busy={isPending}
-        className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-white/25 transition hover:bg-white/10 hover:text-white/60 disabled:opacity-50${isPending ? " has-loading-indicator" : ""}`}
+        className="flex items-center gap-2 rounded-full border border-white/10 bg-white/80 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm transition hover:border-indigo-300 hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {isPending ? (
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="animate-spin">
-            <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" strokeDasharray="14 6" />
-          </svg>
-        ) : (
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M5 2H2.5A1.5 1.5 0 0 0 1 3.5v6A1.5 1.5 0 0 0 2.5 11H5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M8.5 9l3-3-3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M11.5 6H5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-        )}
+        {isPending ? "Signing out..." : "Logout"}
       </button>
       {error ? <p className="text-[10px] text-red-400">{error}</p> : null}
     </div>

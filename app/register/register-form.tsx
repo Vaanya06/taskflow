@@ -54,6 +54,8 @@ export default function RegisterForm() {
           type="text"
           placeholder="Avery Lane"
           autoComplete="name"
+          minLength={2}
+          required
         />
       </label>
 
@@ -75,9 +77,9 @@ export default function RegisterForm() {
           className="soft-input h-12 rounded-2xl px-4 text-sm"
           name="password"
           type="password"
-          placeholder="At least 8 characters"
+          placeholder="12+ characters, strong password"
           required
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
         />
       </label>

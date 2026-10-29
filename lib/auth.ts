@@ -13,6 +13,9 @@ export type AuthUser = {
 
 export const SESSION_COOKIE = "ilamed_session";
 const SESSION_TTL_DAYS = 7;
+const SESSION_REFRESH_WINDOW_MS = 12 * 60 * 60 * 1000;
+
+const authThrottle = new Map<string, { count: number; resetAt: number }>();
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -20,6 +23,48 @@ function hashToken(token: string): string {
 
 function sessionExpiresAt(): Date {
   return new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+}
+
+export function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+export function isStrongPassword(value: string): boolean {
+  if (value.length < 12) {
+    return false;
+  }
+
+  const hasUppercase = /[A-Z]/.test(value);
+  const hasLowercase = /[a-z]/.test(value);
+  const hasDigit = /\d/.test(value);
+  const hasSymbol = /[^A-Za-z0-9]/.test(value);
+
+  return hasUppercase && hasLowercase && hasDigit && hasSymbol;
+}
+
+export function getClientIpAddress(headers: Headers): string {
+  const forwarded = headers.get("x-forwarded-for") ?? "";
+  const realIp = headers.get("x-real-ip") ?? "";
+  const candidate = forwarded.split(",")[0]?.trim() || realIp.trim() || "unknown";
+  return candidate || "unknown";
+}
+
+export function enforceAuthRateLimit(key: string, maxRequests = 10, windowMs = 60_000): boolean {
+  const now = Date.now();
+  const previous = authThrottle.get(key);
+
+  if (!previous || previous.resetAt <= now) {
+    authThrottle.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  if (previous.count >= maxRequests) {
+    return false;
+  }
+
+  previous.count += 1;
+  authThrottle.set(key, previous);
+  return true;
 }
 
 export async function createSession(userId: string): Promise<{
@@ -53,6 +98,23 @@ export async function deleteSessionByToken(token: string): Promise<void> {
   } catch (error) {
     if (isDatabaseConnectionError(error)) {
       console.warn("Skipping session delete because the database connection is unavailable.");
+      return;
+    }
+
+    throw error;
+  }
+}
+
+export async function deleteUserSessions(userId: string): Promise<void> {
+  try {
+    await prisma.session.deleteMany({
+      where: {
+        userId,
+      },
+    });
+  } catch (error) {
+    if (isDatabaseConnectionError(error)) {
+      console.warn("Skipping session cleanup because the database connection is unavailable.");
       return;
     }
 
@@ -120,6 +182,22 @@ export async function getUserBySessionToken(
     }
 
     return null;
+  }
+
+  const refreshedExpiry = sessionExpiresAt();
+  if (session.expiresAt.getTime() - Date.now() < SESSION_REFRESH_WINDOW_MS) {
+    try {
+      await prisma.session.update({
+        where: { id: session.id },
+        data: { expiresAt: refreshedExpiry },
+      });
+    } catch (error) {
+      if (isDatabaseConnectionError(error)) {
+        console.warn("Session refresh skipped because the database connection is unavailable.");
+      } else {
+        throw error;
+      }
+    }
   }
 
   return session.user;
