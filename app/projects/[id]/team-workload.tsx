@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type WorkloadTask = {
@@ -213,9 +214,9 @@ export default function TeamWorkload({
                 return (
                   <tr key={task.id} className="hover:bg-slate-50">
                     <td className="px-5 py-3.5">
-                      <a className="text-sm font-medium text-indigo-700 hover:text-indigo-900 hover:underline" href={`/projects/${projectId}?tab=board&taskId=${task.id}`}>
+                      <Link className="text-sm font-medium text-indigo-700 hover:text-indigo-900 hover:underline" href={`/projects/${projectId}?tab=board&taskId=${task.id}`}>
                         {task.title}
-                      </a>
+                      </Link>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-slate-600">{task.assignee?.name || task.assignee?.email || "Unassigned"}</td>
                     <td className="px-5 py-3.5">

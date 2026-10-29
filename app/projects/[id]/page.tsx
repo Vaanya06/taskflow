@@ -18,6 +18,7 @@ import CompleteSprintButton from "./complete-sprint-button";
 import SprintBurndownChart from "./sprint-burndown-chart";
 import TeamWorkload from "./team-workload";
 import { recordActiveSprintProgress } from "@/services/sprint-progress";
+import { getDemoProjectId } from "@/services/demo-project";
 
 type PageProps = {
   params: Promise<{
@@ -810,9 +811,12 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
           </div>
           <Link
             href="/dashboard"
+            title={project.id === getDemoProjectId(user.id)
+              ? "Return to the dashboard. Your feature demo will remain available."
+              : undefined}
             className="flex h-8 items-center rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-medium text-white/50 transition hover:border-white/20 hover:text-white"
           >
-            Back to dashboard
+            {project.id === getDemoProjectId(user.id) ? "Exit feature demo" : "Back to dashboard"}
           </Link>
         </>
       }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 type AuthFrameProps = {
@@ -38,14 +39,7 @@ export function AuthFrame({
           <div className="surface-grid absolute inset-0 opacity-[0.08]" />
           <div>
             <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold text-white">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(99,102,241,0.95),rgba(167,139,250,0.82))] text-white shadow-[0_18px_34px_rgba(99,102,241,0.2)]">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <rect x="1" y="1" width="5" height="5" rx="1.5" fill="currentColor" />
-                  <rect x="8" y="1" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.68" />
-                  <rect x="1" y="8" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.68" />
-                  <rect x="8" y="8" width="5" height="5" rx="1.5" fill="currentColor" opacity="0.32" />
-                </svg>
-              </span>
+              <Image src="/ilamed-logo.png" alt="ILAMED logo" width={40} height={40} className="h-10 w-10 object-contain" />
               <div>
                 <p className="text-sm font-semibold text-white">ILAMED</p>
                 <p className="text-[10px] uppercase tracking-[0.24em] text-white/34">

@@ -7,6 +7,7 @@ import { accessibleProjectWhere, accessibleTaskWhere } from "@/project-access";
 import DeleteProjectButton from "./delete-project-button";
 import LogoutButton from "./logout-button";
 import NewProjectForm from "./new-project-form";
+import DemoProjectButton from "./demo-project-button";
 import TeamManagement from "./team-management";
 
 type DashboardTask = {
@@ -380,6 +381,7 @@ export default async function DashboardPage() {
         <>
           <span className="badge-pill hidden text-xs text-white/58 md:inline-flex">{currentDateLabel}</span>
           <span className="badge-pill hidden text-xs text-white/58 xl:inline-flex">{dueSoonTasks} due soon</span>
+          <DemoProjectButton />
           <NewProjectForm />
         </>
       }

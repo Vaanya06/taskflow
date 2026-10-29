@@ -1,7 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import NewTaskForm from "./new-task-form";
 import TaskCard from "./task-card";
 
@@ -10,7 +9,6 @@ type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
 type IssueType = "EPIC" | "STORY" | "TASK" | "BUG";
 type ViewMode = "ALL" | "MINE" | "FOCUS" | "BACKLOG" | "CURRENT_SPRINT" | "RECENTLY_UPDATED";
 type SortMode = "UPDATED" | "DUE_ASC" | "PRIORITY" | "POINTS" | "TITLE";
-type LayoutMode = "BOARD" | "LIST";
 
 type TaskLabel = {
   id: string;
@@ -79,12 +77,6 @@ type Notification = {
   message: string;
   type: NotificationType;
 };
-
-const COLUMNS = [
-  { status: "TODO" as const, label: "Todo", helper: "Plan upcoming work." },
-  { status: "IN_PROGRESS" as const, label: "In progress", helper: "Focus on active items." },
-  { status: "DONE" as const, label: "Done", helper: "Celebrate the wins." },
-];
 
 const ISSUE_TYPE_LABELS: Record<IssueType, string> = {
   EPIC: "Epic",
@@ -219,7 +211,6 @@ export default function TaskBoard({
   canManageTasks,
   requestedTaskId,
 }: TaskBoardProps) {
-  const router = useRouter();
   const notificationIdRef = useRef(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
@@ -231,13 +222,10 @@ export default function TaskBoard({
   const [sprintFilter, setSprintFilter] = useState("ALL");
   const [viewMode, setViewMode] = useState<ViewMode>("ALL");
   const [sortMode, setSortMode] = useState<SortMode>("UPDATED");
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>("BOARD");
   const [hideDone, setHideDone] = useState(false);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(tasks[0]?.id ?? null);
-  const [isPending, startTransition] = useTransition();
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [dismissedRequestedTaskId, setDismissedRequestedTaskId] = useState<string | null>(null);
 
   const deferredQuery = useDeferredValue(query);
   const projectLabels = Array.from(new Map(tasks.flatMap((task) => task.labels.map((label) => [label.id, label]))).values()).sort((left, right) => left.name.localeCompare(right.name));
@@ -259,15 +247,6 @@ export default function TaskBoard({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  useEffect(() => {
-    if (requestedTaskId) {
-      document.getElementById(`task-${requestedTaskId}`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }
-  }, [requestedTaskId, layoutMode]);
 
   const normalizedQuery = normalize(deferredQuery);
   const today = startOfToday();
@@ -370,12 +349,6 @@ export default function TaskBoard({
     return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
   });
 
-  const tasksByStatus = {
-    TODO: sortedTasks.filter((task) => task.status === "TODO"),
-    IN_PROGRESS: sortedTasks.filter((task) => task.status === "IN_PROGRESS"),
-    DONE: sortedTasks.filter((task) => task.status === "DONE"),
-  } as const;
-
   const totalTasks = tasks.length;
   const doneTasks = tasks.filter((task) => task.status === "DONE").length;
   const progress = totalTasks ? (doneTasks / totalTasks) * 100 : 0;
@@ -384,11 +357,28 @@ export default function TaskBoard({
   const completedThisWeek = tasks.filter((task) => task.status === "DONE" && new Date(task.updatedAt) >= weekAgo).length;
   const backlogTasks = tasks.filter((task) => !task.sprint).length;
   const currentSprintPoints = activeSprintId ? tasks.filter((task) => task.sprint?.id === activeSprintId).reduce((sum, task) => sum + (task.storyPoints ?? 0), 0) : 0;
-  const overdueCount = tasks.filter((task) => task.status !== "DONE" && task.dueDate && startOfDate(new Date(task.dueDate)) < today).length;
-  const dueSoonCount = tasks.filter((task) => task.status !== "DONE" && task.dueDate && isWithinNextDays(new Date(task.dueDate), 7)).length;
-  const mineCount = tasks.filter((task) => task.assignee?.id === currentUserId && task.status !== "DONE").length;
-  const focusSpotlight = sortedTasks.find((task) => matchesViewPreset(task, "FOCUS", today, threeDaysAgo, currentUserId, activeSprintId)) ?? sortedTasks[0] ?? null;
-  const selectedTask = sortedTasks.find((task) => task.id === selectedTaskId) ?? sortedTasks[0] ?? null;
+  const modalTaskId = selectedTaskId
+    ?? (requestedTaskId !== dismissedRequestedTaskId ? requestedTaskId : null);
+  const selectedTask = tasks.find((task) => task.id === modalTaskId) ?? null;
+  const closeTaskDetails = () => {
+    setSelectedTaskId(null);
+    setDismissedRequestedTaskId(requestedTaskId);
+  };
+
+  useEffect(() => {
+    if (!modalTaskId) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedTaskId(null);
+        setDismissedRequestedTaskId(requestedTaskId);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [modalTaskId, requestedTaskId]);
 
   const viewCounts = {
     ALL: tasks.length,
@@ -406,53 +396,6 @@ export default function TaskBoard({
     window.setTimeout(() => {
       setNotifications((prev) => prev.filter((item) => item.id !== id));
     }, 4000);
-  };
-
-  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, taskId: string) => {
-    event.dataTransfer.setData("text/plain", taskId);
-    event.dataTransfer.effectAllowed = "move";
-    setDraggingId(taskId);
-  };
-
-  const handleDragEnd = () => {
-    setDraggingId(null);
-    setDragOverStatus(null);
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>, status: TaskStatus) => {
-    event.preventDefault();
-    setDragOverStatus(status);
-  };
-
-  const handleDrop = async (event: React.DragEvent<HTMLDivElement>, status: TaskStatus) => {
-    event.preventDefault();
-    const taskId = draggingId ?? event.dataTransfer.getData("text/plain");
-    setDragOverStatus(null);
-    setDraggingId(null);
-
-    if (!taskId) {
-      return;
-    }
-
-    const draggedTask = tasks.find((task) => task.id === taskId);
-    if (!draggedTask || draggedTask.status === status) {
-      return;
-    }
-
-    const response = await fetch(`/api/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-
-    if (response.ok) {
-      pushNotification(`Moved ${draggedTask.title} to ${COLUMNS.find((column) => column.status === status)?.label ?? status}.`, "success");
-      startTransition(() => router.refresh());
-      return;
-    }
-
-    const data = await response.json().catch(() => ({}));
-    pushNotification(data.error || "Unable to move issue.", "error");
   };
 
   const handleClearFilters = () => {
@@ -498,8 +441,6 @@ export default function TaskBoard({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => setLayoutMode("BOARD")} className={`secondary-button flex h-10 items-center px-4 text-xs font-semibold uppercase tracking-[0.16em] ${layoutMode === "BOARD" ? "text-white" : "text-white/58"}`}>Board lanes</button>
-            <button type="button" onClick={() => setLayoutMode("LIST")} className={`secondary-button flex h-10 items-center px-4 text-xs font-semibold uppercase tracking-[0.16em] ${layoutMode === "LIST" ? "text-white" : "text-white/58"}`}>Agenda</button>
             <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/32">
               Sort
               <select className="soft-input h-10 rounded-2xl px-3 text-sm normal-case tracking-normal" value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
@@ -508,35 +449,6 @@ export default function TaskBoard({
             </label>
           </div>
         </div>
-
-        {focusSpotlight ? (
-          <div className="mt-5 grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
-            <div className="rounded-[28px] border border-white/[0.08] bg-white/[0.04] p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/28">Spotlight issue</p>
-              <h3 className="mt-3 text-xl font-semibold text-white/88">{focusSpotlight.title}</h3>
-              <p className="mt-2 text-sm leading-7 text-white/44">{focusSpotlight.description || "Use the agenda view to inspect details while keeping the board filters active."}</p>
-              <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-white/50">
-                <span className="badge-pill">{ISSUE_TYPE_LABELS[focusSpotlight.issueType]}</span>
-                <span className="badge-pill">{focusSpotlight.priority.toLowerCase()} priority</span>
-                <span className="badge-pill">{focusSpotlight.assignee ? getPersonLabel(focusSpotlight.assignee) : "Unassigned"}</span>
-                <span className="badge-pill">{focusSpotlight.sprint ? focusSpotlight.sprint.title : "Backlog"}</span>
-              </div>
-              <div className="mt-4 flex gap-2">
-                <button type="button" onClick={() => { setLayoutMode("LIST"); setSelectedTaskId(focusSpotlight.id); }} className="accent-button flex h-10 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
-                  Review in agenda
-                </button>
-                <button type="button" onClick={() => setViewMode("FOCUS")} className="secondary-button flex h-10 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]">
-                  Focus only
-                </button>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
-              <div className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-white/28">Overdue</p><p className="mt-2 text-2xl font-semibold text-white/88">{overdueCount}</p></div>
-              <div className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-white/28">Due soon</p><p className="mt-2 text-2xl font-semibold text-white/88">{dueSoonCount}</p></div>
-              <div className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-white/28">Assigned to you</p><p className="mt-2 text-2xl font-semibold text-white/88">{mineCount}</p></div>
-            </div>
-          </div>
-        ) : null}
 
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-7">
           <label className="flex flex-col gap-2 text-sm font-medium text-white/52 xl:col-span-2">Search issues
@@ -559,60 +471,117 @@ export default function TaskBoard({
         </div>
       </div>
 
-      {layoutMode === "BOARD" ? (
-        <div id="board" className="grid auto-cols-[minmax(260px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
-          {COLUMNS.map((column) => {
-            const columnTasks = tasksByStatus[column.status];
-            const isActiveDrop = dragOverStatus === column.status;
-            return (
-              <div key={column.status} className="flex min-w-0 flex-col gap-3">
-                <div className="panel-card-soft rounded-2xl p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="text-sm font-semibold text-white/88">{column.label}</h2>
-                      <p className="mt-1 text-xs text-white/40">{column.helper}</p>
+      <div id="board" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03]">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">Issues</h2>
+            <p className="mt-1 text-xs text-slate-500">Select an issue to view details, labels, and comments.</p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{filteredTasks.length} shown</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] border-collapse text-left">
+            <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+              <tr>
+                <th scope="col" className="px-5 py-3">Issue</th>
+                <th scope="col" className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3">Assignee</th>
+                <th scope="col" className="px-4 py-3">Priority</th>
+                <th scope="col" className="px-4 py-3">Due date</th>
+                <th scope="col" className="px-4 py-3">Sprint</th>
+                <th scope="col" className="px-5 py-3 text-right">Details</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {sortedTasks.length ? sortedTasks.map((task) => (
+                <tr
+                  id={`task-${task.id}`}
+                  key={task.id}
+                  className="group cursor-pointer transition hover:bg-indigo-50/50"
+                  role="button"
+                  onClick={() => setSelectedTaskId(task.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedTaskId(task.id);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-label={`View details for ${task.title}`}
+                >
+                  <td className="px-5 py-3.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="shrink-0 rounded-md border border-indigo-100 bg-indigo-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">{ISSUE_TYPE_LABELS[task.issueType]}</span>
+                      <span className="truncate text-sm font-medium text-slate-800">{task.title}</span>
+                      {task.comments.length ? <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">{task.comments.length} comments</span> : null}
                     </div>
-                    <span className="badge-pill shrink-0 px-3 py-1 text-[11px]">{columnTasks.length}</span>
-                  </div>
-                </div>
-                <div className={`flex min-h-[180px] flex-col gap-3 rounded-2xl border p-3 transition ${isActiveDrop ? "border-[var(--accent)]/40 bg-indigo-50/70" : "border-slate-200/80 bg-slate-100/70"}`} onDragOver={(event) => handleDragOver(event, column.status)} onDragLeave={() => setDragOverStatus(null)} onDrop={(event) => handleDrop(event, column.status)}>
-                  {columnTasks.length ? columnTasks.map((task) => (
-                    <div id={`task-${task.id}`} key={task.id} draggable={canManageTasks || task.assignee?.id === currentUserId} onDragStart={(event) => handleDragStart(event, task.id)} onDragEnd={handleDragEnd} className={draggingId === task.id ? "opacity-60" : undefined}>
-                      <TaskCard task={task} members={members} sprints={sprints} currentUserId={currentUserId} canDelete={canDeleteTasks} canManageTasks={canManageTasks} projectLabels={projectLabels} onNotify={pushNotification} />
-                    </div>
-                  )) : <div className="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/70 px-5 py-6 text-center text-sm text-slate-500">No issues here yet. Drag an issue to update its status.</div>}
-                </div>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${task.status === "DONE" ? "bg-emerald-50 text-emerald-700" : task.status === "IN_PROGRESS" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"}`}>
+                      {task.status === "IN_PROGRESS" ? "In progress" : task.status === "DONE" ? "Done" : "To do"}
+                    </span>
+                  </td>
+                  <td className="max-w-40 truncate px-4 py-3.5 text-sm text-slate-600">{task.assignee ? getPersonLabel(task.assignee) : "Unassigned"}</td>
+                  <td className="px-4 py-3.5 text-sm text-slate-600">{task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 text-sm text-slate-600">{formatDueLabel(task.dueDate)}</td>
+                  <td className="max-w-36 truncate px-4 py-3.5 text-sm text-slate-600">{task.sprint?.title ?? "Backlog"}</td>
+                  <td className="px-5 py-3.5 text-right">
+                    <span className="text-xs font-semibold text-indigo-700 group-hover:text-indigo-900">View</span>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={7} className="px-5 py-14 text-center text-sm text-slate-500">No issues match the current filters.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {selectedTask ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm sm:p-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeTaskDetails();
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="task-details-title"
+            className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl shadow-slate-950/20"
+          >
+            <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4">
+              <div className="min-w-0">
+                <h2 id="task-details-title" className="text-base font-semibold text-slate-900">Issue details</h2>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div id="board" className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-          <div className="panel-card rounded-[32px] p-5">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4"><div><p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Agenda view</p><p className="mt-2 text-sm text-white/42">A denser list for scanning and selecting a single issue.</p></div><span className="text-xs text-white/30">{sortedTasks.length} items</span></div>
-            <div className="mt-4 grid gap-2">
-              {sortedTasks.length ? sortedTasks.map((task) => {
-                const isSelected = selectedTask?.id === task.id;
-                return (
-                  <button key={task.id} type="button" onClick={() => setSelectedTaskId(task.id)} className={`rounded-[24px] border px-4 py-4 text-left transition ${isSelected ? "border-[var(--accent)]/25 bg-[rgba(62,214,177,0.12)]" : "border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.06]"}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/42"><span className="badge-pill px-3 py-1">{ISSUE_TYPE_LABELS[task.issueType]}</span><span>{task.sprint ? task.sprint.title : "Backlog"}</span></div>
-                        <p className="mt-2 truncate text-sm font-semibold text-white/86">{task.title}</p>
-                        <p className="mt-1 text-xs text-white/34">{task.assignee ? getPersonLabel(task.assignee) : "Unassigned"} / {task.priority.toLowerCase()} priority</p>
-                      </div>
-                      <div className="text-right text-xs text-white/34"><p>{formatDueLabel(task.dueDate)}</p><p className="mt-1">{task.comments.length} comments</p></div>
-                    </div>
-                  </button>
-                );
-              }) : <div className="rounded-[24px] border border-dashed border-white/[0.1] bg-white/[0.03] p-6 text-sm text-white/28">No issues match the current filters.</div>}
+              <button
+                type="button"
+                onClick={closeTaskDetails}
+                aria-label="Close issue details"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+              >
+                ×
+              </button>
+            </header>
+            <div className="overflow-y-auto p-4 sm:p-5">
+              <TaskCard
+                task={selectedTask}
+                members={members}
+                sprints={sprints}
+                currentUserId={currentUserId}
+                canDelete={canDeleteTasks}
+                canManageTasks={canManageTasks}
+                projectLabels={projectLabels}
+                onNotify={pushNotification}
+              />
             </div>
-          </div>
-          <div className="flex flex-col gap-4">
-            {selectedTask ? <TaskCard task={selectedTask} members={members} sprints={sprints} currentUserId={currentUserId} canDelete={canDeleteTasks} canManageTasks={canManageTasks} projectLabels={projectLabels} onNotify={pushNotification} /> : <div className="panel-card-soft rounded-[28px] p-6 text-sm text-white/32">Choose an issue to inspect it here.</div>}
-          </div>
+          </section>
         </div>
-      )}
+      ) : null}
 
       {notifications.length ? (
         <div className="fixed bottom-6 right-6 z-50 flex w-full max-w-sm flex-col gap-3">
@@ -624,7 +593,6 @@ export default function TaskBoard({
         </div>
       ) : null}
 
-      <div id="activity">{isPending ? <p className="text-xs text-white/25">Syncing updates...</p> : null}</div>
     </section>
   );
 }

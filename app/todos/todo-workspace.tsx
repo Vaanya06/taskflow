@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkspaceSwitcher } from "@/app/workspace-switcher";
 
@@ -467,9 +468,7 @@ export default function TodoWorkspace({
       <div className="flex min-h-screen flex-col lg:flex-row">
         <aside className="todo-sidebar flex w-full shrink-0 flex-col px-4 py-5 lg:min-h-screen lg:w-[272px] lg:px-5">
           <Link href="/" className="flex items-center gap-3 px-2">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white">
-              <Icon name="check" />
-            </span>
+            <Image src="/ilamed-logo.png" alt="ILAMED logo" width={40} height={40} className="h-10 w-10 object-contain" />
             <span>
               <span className="block text-sm font-bold tracking-tight">ILAMED</span>
               <span className="block text-xs text-slate-500">A little more focus.</span>
