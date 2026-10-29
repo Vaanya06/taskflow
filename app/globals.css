@@ -64,7 +64,12 @@ button:not(:disabled),
 a[href],
 [role="button"],
 [role="link"],
-[class*="cursor-pointer"] {
+[class*="cursor-pointer"],
+summary,
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled) {
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -85,11 +90,11 @@ a[href]:focus-visible,
   outline-offset: 3px;
 }
 
-button[aria-busy="true"] {
+[aria-busy="true"] {
   cursor: wait;
 }
 
-button[aria-busy="true"]::after {
+button[aria-busy="true"]:not(.has-loading-indicator)::after {
   content: "";
   display: inline-block;
   width: 0.9em;
@@ -103,9 +108,35 @@ button[aria-busy="true"]::after {
   animation: control-spinner 700ms linear infinite;
 }
 
+.route-loading {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  justify-items: center;
+  gap: 1rem;
+  background: var(--background);
+  color: #64748b;
+}
+
+.route-loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #c7d2fe;
+  border-right-color: var(--accent);
+  border-radius: 50%;
+  animation: control-spinner 700ms linear infinite;
+}
+
 @keyframes control-spinner {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-spinner,
+  button[aria-busy="true"]::after {
+    animation-duration: 1.8s;
   }
 }
 

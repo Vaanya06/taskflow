@@ -31,7 +31,7 @@ export default function LogoutButton() {
         onClick={handleLogout}
         disabled={isPending}
         aria-busy={isPending}
-        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-white/25 transition hover:bg-white/10 hover:text-white/60 disabled:opacity-50"
+        className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-white/25 transition hover:bg-white/10 hover:text-white/60 disabled:opacity-50${isPending ? " has-loading-indicator" : ""}`}
       >
         {isPending ? (
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="animate-spin">

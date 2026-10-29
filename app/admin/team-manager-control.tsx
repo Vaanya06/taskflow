@@ -38,7 +38,7 @@ export default function TeamManagerControl({ teamId, managerId, members }: TeamM
           {members.map((member) => <option key={member.id} value={member.id}>{member.label}</option>)}
         </select>
       </label>
-      <button type="button" onClick={() => void save()} disabled={pending || selectedId === managerId} className="secondary-button h-9 px-3 text-xs font-semibold disabled:opacity-50">
+      <button type="button" onClick={() => void save()} disabled={pending || selectedId === managerId} aria-busy={pending} className="secondary-button h-9 px-3 text-xs font-semibold disabled:opacity-50">
         {pending ? "Saving…" : "Change"}
       </button>
       {error ? <p role="alert" className="basis-full text-xs text-rose-600">{error}</p> : null}
