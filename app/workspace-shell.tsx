@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { WorkspaceSwitcher } from "@/app/workspace-switcher";
+import NotificationsInbox from "@/app/notifications-inbox";
 
 export type WorkspaceNavItem = {
   href: string;
@@ -204,7 +205,10 @@ export function WorkspaceShell({
             </p>
             <h1 className="display-font text-3xl text-white/92">{title}</h1>
           </div>
-          <div className="flex flex-wrap items-center gap-2">{topbarRight}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <NotificationsInbox />
+            {topbarRight}
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">

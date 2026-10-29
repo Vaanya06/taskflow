@@ -28,29 +28,29 @@ export function accessibleProjectWhere(userId: string): Prisma.ProjectWhereInput
 
 export function accessibleTaskWhere(userId: string): Prisma.TaskWhereInput {
   return {
-    OR: [
+    AND: [
       {
-        assigneeId: userId,
+        project: accessibleProjectWhere(userId),
       },
       {
-        assigneeId: null,
-      },
-      {
-        project: {
-          ownerId: userId,
-        },
-      },
-      {
-        project: {
-          team: {
-            memberships: {
-              some: {
-                userId,
-                role: "MANAGER",
+        OR: [
+          { assigneeId: userId },
+          { assigneeId: null },
+          { project: { ownerId: userId } },
+          { project: { members: { some: { userId } } } },
+          {
+            project: {
+              team: {
+                memberships: {
+                  some: {
+                    userId,
+                    role: "MANAGER",
+                  },
+                },
               },
             },
           },
-        },
+        ],
       },
     ],
   };

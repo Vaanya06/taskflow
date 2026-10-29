@@ -18,6 +18,14 @@ export default function TeamManagement() {
   const [teams, setTeams] = useState<TeamData[]>([]);
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Record<string, string>>({});
+  const [pendingMember, setPendingMember] = useState<string | null>(null);
+
+  async function refreshTeams() {
+    const response = await fetch("/api/teams");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to refresh teams.");
+    setTeams(data.teams);
+  }
 
   useEffect(() => {
     let active = true;
@@ -35,21 +43,72 @@ export default function TeamManagement() {
 
   async function addMember(team: TeamData) {
     setMessages((current) => ({ ...current, [team.id]: "" }));
-    const response = await fetch(`/api/teams/${team.id}/members`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: emails[team.id] || "" }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      setMessages((current) => ({ ...current, [team.id]: data.error || "Unable to add member." }));
-      return;
+    try {
+      const response = await fetch(`/api/teams/${team.id}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emails[team.id] || "" }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessages((current) => ({ ...current, [team.id]: data.error || "Unable to add member." }));
+        return;
+      }
+      setEmails((current) => ({ ...current, [team.id]: "" }));
+      setMessages((current) => ({ ...current, [team.id]: `Added ${data.member.email}.` }));
+      await refreshTeams();
+    } catch {
+      setMessages((current) => ({ ...current, [team.id]: "Unable to add member. Check your connection and try again." }));
     }
-    setEmails((current) => ({ ...current, [team.id]: "" }));
-    setMessages((current) => ({ ...current, [team.id]: `Added ${data.member.email}.` }));
-    const refreshed = await fetch("/api/teams");
-    const teamData = await refreshed.json();
-    if (refreshed.ok) setTeams(teamData.teams);
+  }
+
+  async function updateMemberRole(team: TeamData, membership: TeamData["memberships"][number]) {
+    const role = membership.role === "MANAGER" ? "MEMBER" : "MANAGER";
+    setPendingMember(`${team.id}:${membership.user.id}`);
+    setMessages((current) => ({ ...current, [team.id]: "" }));
+    try {
+      const response = await fetch(`/api/teams/${team.id}/members`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: membership.user.id, role }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessages((current) => ({ ...current, [team.id]: data.error || "Unable to update member role." }));
+        return;
+      }
+      await refreshTeams();
+      setMessages((current) => ({ ...current, [team.id]: "Member role updated." }));
+    } catch {
+      setMessages((current) => ({ ...current, [team.id]: "Unable to update member role. Check your connection and try again." }));
+    } finally {
+      setPendingMember(null);
+    }
+  }
+
+  async function removeMember(team: TeamData, membership: TeamData["memberships"][number]) {
+    const label = membership.user.name || membership.user.email;
+    if (!window.confirm(`Remove ${label} from ${team.name}?`)) return;
+    setPendingMember(`${team.id}:${membership.user.id}`);
+    setMessages((current) => ({ ...current, [team.id]: "" }));
+    try {
+      const response = await fetch(`/api/teams/${team.id}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: membership.user.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessages((current) => ({ ...current, [team.id]: data.error || "Unable to remove member." }));
+        return;
+      }
+      await refreshTeams();
+      setMessages((current) => ({ ...current, [team.id]: `Removed ${label}.` }));
+    } catch {
+      setMessages((current) => ({ ...current, [team.id]: "Unable to remove member. Check your connection and try again." }));
+    } finally {
+      setPendingMember(null);
+    }
   }
 
   if (!teams.length && !messages.load) return null;
@@ -75,11 +134,32 @@ export default function TeamManagement() {
                 <button className="secondary-button px-3 text-xs font-semibold">Add member</button>
               </form>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 grid gap-2">
               {team.memberships.map((membership) => (
-                <span key={membership.id} className="badge-pill text-xs">
-                  {membership.user.name || membership.user.email}{membership.role === "MANAGER" ? " · Manager" : ""}
-                </span>
+                <div key={membership.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                  <span className="min-w-0 truncate text-xs text-slate-700">
+                    {membership.user.name || membership.user.email}
+                    <span className="ml-2 text-slate-400">{membership.role === "MANAGER" ? "Manager" : "Member"}</span>
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void updateMemberRole(team, membership)}
+                      disabled={pendingMember !== null}
+                      className="secondary-button px-2.5 py-1 text-[10px] font-semibold disabled:opacity-50"
+                    >
+                      {membership.role === "MANAGER" ? "Make member" : "Make manager"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void removeMember(team, membership)}
+                      disabled={pendingMember !== null}
+                      className="secondary-button px-2.5 py-1 text-[10px] font-semibold text-rose-600 disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
             {team.projects.length ? (
@@ -91,7 +171,14 @@ export default function TeamManagement() {
                 ))}
               </p>
             ) : null}
-            {messages[team.id] ? <p role={messages[team.id].startsWith("Added ") ? undefined : "alert"} className="mt-2 text-xs text-slate-600">{messages[team.id]}</p> : null}
+            {messages[team.id] ? (
+              <p
+                role={/^(Added |Removed |Member role updated)/.test(messages[team.id]) ? "status" : "alert"}
+                className="mt-2 text-xs text-slate-600"
+              >
+                {messages[team.id]}
+              </p>
+            ) : null}
           </article>
         ))}
       </div>

@@ -7,6 +7,8 @@ import {
 } from "@/services/taskService";
 import { accessibleProjectWhere } from "@/project-access";
 import { canManageProjectTasks } from "@/lib/project-task-permissions";
+import { recordActiveSprintProgress } from "@/services/sprint-progress";
+import { buildTaskNotifications } from "@/services/notifications";
 
 const ISSUE_TYPES = new Set(["EPIC", "STORY", "TASK", "BUG"]);
 const TASK_STATUSES = new Set(["TODO", "IN_PROGRESS", "DONE"]);
@@ -91,6 +93,9 @@ export async function GET(request: Request) {
     },
     select: {
       id: true,
+      ownerId: true,
+      members: { select: { userId: true } },
+      team: { select: { memberships: { select: { userId: true, role: true } } } },
     },
   });
 
@@ -101,7 +106,10 @@ export async function GET(request: Request) {
     );
   }
 
-  const tasks = await listTasksByProject(projectId);
+  const allTasks = await listTasksByProject(projectId);
+  const tasks = canManageProjectTasks(project, user.id)
+    ? allTasks
+    : allTasks.filter((task) => !task.assignee || task.assignee.id === user.id);
 
   return NextResponse.json({ ok: true, tasks });
 }
@@ -197,7 +205,7 @@ export async function POST(request: Request) {
     ...(project.team?.memberships.map((member) => member.userId) ?? []),
   ]);
 
-  if (!canManageProjectTasks(project, user.id, user.role)) {
+  if (!canManageProjectTasks(project, user.id)) {
     return NextResponse.json({ ok: false, error: "Only project owners, project members, or the connected team manager can create issues." }, { status: 403 });
   }
 
@@ -279,10 +287,25 @@ export async function POST(request: Request) {
       },
     });
 
+    if (createdTask.assignee) {
+      const assignmentNotifications = buildTaskNotifications({
+        recipientIds: [createdTask.assignee.id],
+        actorId: user.id,
+        projectId,
+        taskId: createdTask.id,
+        type: "TASK_ASSIGNED",
+        message: `${user.name || user.email} assigned you to "${createdTask.title}"`,
+      });
+      if (assignmentNotifications.length) {
+        await tx.notification.createMany({ data: assignmentNotifications });
+      }
+    }
+
     return createdTask;
   });
 
   await invalidateTasksByProject(projectId);
+  await recordActiveSprintProgress(projectId);
 
   return NextResponse.json({ ok: true, task }, { status: 201 });
 }

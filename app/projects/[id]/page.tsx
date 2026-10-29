@@ -4,11 +4,19 @@ import { WorkspaceShell } from "@/app/workspace-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accessibleProjectWhere, accessibleTaskWhere } from "@/project-access";
+import {
+  canManageProject as hasProjectManagementAccess,
+  canManageProjectTasks as hasTaskManagementAccess,
+} from "@/lib/project-task-permissions";
 import LogoutButton from "@/app/dashboard/logout-button";
 import AddMemberForm from "./add-member-form";
 import AddSprintForm from "./add-sprint-form";
 import TaskBoard from "./task-board";
 import ProjectTeamControl from "./project-team-control";
+import ProjectMembershipControls from "./project-membership-controls";
+import CompleteSprintButton from "./complete-sprint-button";
+import SprintBurndownChart from "./sprint-burndown-chart";
+import { recordActiveSprintProgress } from "@/services/sprint-progress";
 
 type PageProps = {
   params: Promise<{
@@ -16,6 +24,7 @@ type PageProps = {
   }>;
   searchParams?: Promise<{
     tab?: string;
+    taskId?: string;
   }>;
 };
 
@@ -24,6 +33,7 @@ type WorkspaceMember = {
   name: string | null;
   email: string;
   role: "OWNER" | "MEMBER";
+  accessRole: "OWNER" | "PROJECT MEMBER" | "TEAM MANAGER" | "TEAM MEMBER";
 };
 
 function startOfToday() {
@@ -103,7 +113,9 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
   }
 
   const projectId = (await params).id;
-  const activeTab = (await searchParams)?.tab ?? "board";
+  const query = await searchParams;
+  const activeTab = query?.tab ?? "board";
+  const requestedTaskId = query?.taskId ?? null;
   const tabValues = ["overview", "planning", "board", "team", "activity"] as const;
   const normalizedTab = tabValues.includes(activeTab as (typeof tabValues)[number])
     ? (activeTab as (typeof tabValues)[number])
@@ -176,24 +188,61 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
       })
     : [];
 
-  const isProjectOwner = project.ownerId === user.id;
-  const isDirectProjectMember = project.members.some((member) => member.user.id === user.id);
-  const isTeamManager = user.role === "MANAGER" &&
-    project.team?.memberships.some(
-      (membership) => membership.userId === user.id && membership.role === "MANAGER",
-    ) === true;
-  const canManageProjectTasks = isProjectOwner || isDirectProjectMember || isTeamManager;
+  const projectPermissions = {
+    ownerId: project.ownerId,
+    members: project.members.map((member) => ({ userId: member.user.id })),
+    team: project.team
+      ? {
+          memberships: project.team.memberships.map((membership) => ({
+            userId: membership.userId,
+            role: membership.role,
+          })),
+        }
+      : null,
+  };
+  const canManageProject = hasProjectManagementAccess(projectPermissions, user.id);
+  const canManageProjectTasks = hasTaskManagementAccess(projectPermissions, user.id);
+
+  if (normalizedTab === "planning") {
+    await recordActiveSprintProgress(project.id);
+  }
+  const sprintHistory = normalizedTab === "planning"
+    ? await prisma.sprint.findMany({
+        where: { projectId: project.id },
+        orderBy: [{ completedAt: "desc" }, { createdAt: "desc" }],
+        select: {
+          id: true,
+          title: true,
+          startDate: true,
+          endDate: true,
+          completedAt: true,
+          isActive: true,
+          scopeTasks: true,
+          scopePoints: true,
+          completedTasks: true,
+          carriedOverTasks: true,
+          completedPoints: true,
+          carriedOverPoints: true,
+          snapshots: {
+            orderBy: { snapshotDate: "asc" },
+            select: {
+              snapshotDate: true,
+              scopeTasks: true,
+              remainingTasks: true,
+            },
+          },
+        },
+      })
+    : [];
 
   const [tasks, activities] = await Promise.all([
     prisma.task.findMany({
-      where: canManageProjectTasks
-        ? { projectId: project.id }
-        : {
-            AND: [
-              { projectId: project.id },
-              accessibleTaskWhere(user.id),
-            ],
-          },
+      where: {
+        AND: [
+          { projectId: project.id },
+          accessibleTaskWhere(user.id),
+        ],
+      },
       orderBy: {
         createdAt: "desc",
       },
@@ -254,6 +303,10 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
     prisma.activity.findMany({
       where: {
         projectId: project.id,
+        OR: [
+          { taskId: null },
+          { task: { is: accessibleTaskWhere(user.id) } },
+        ],
       },
       orderBy: {
         createdAt: "desc",
@@ -276,6 +329,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
     name: project.owner.name,
     email: project.owner.email,
     role: "OWNER",
+    accessRole: "OWNER",
   });
 
   for (const membership of project.members) {
@@ -285,24 +339,30 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
         name: membership.user.name,
         email: membership.user.email,
         role: membership.role,
+        accessRole: "PROJECT MEMBER",
       });
     }
   }
 
   for (const membership of project.team?.memberships ?? []) {
-    if (!teamMemberMap.has(membership.user.id)) {
+    const existing = teamMemberMap.get(membership.user.id);
+    if (membership.role === "MANAGER" && existing && existing.role !== "OWNER") {
+      existing.accessRole = "TEAM MANAGER";
+    } else if (!existing) {
       teamMemberMap.set(membership.user.id, {
         id: membership.user.id,
         name: membership.user.name,
         email: membership.user.email,
         role: "MEMBER",
+        accessRole: membership.role === "MANAGER" ? "TEAM MANAGER" : "TEAM MEMBER",
       });
     }
   }
 
   const teamMembers = Array.from(teamMemberMap.values()).sort((left, right) => {
-    if (left.role !== right.role) {
-      return left.role === "OWNER" ? -1 : 1;
+    if (left.accessRole !== right.accessRole) {
+      const order = ["OWNER", "TEAM MANAGER", "PROJECT MEMBER", "TEAM MEMBER"];
+      return order.indexOf(left.accessRole) - order.indexOf(right.accessRole);
     }
 
     return getPersonLabel(left).localeCompare(getPersonLabel(right));
@@ -361,6 +421,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
   const backlogOpenTasks = backlogTasks.filter((task) => task.status !== "DONE");
   const backlogPoints = backlogOpenTasks.reduce((sum, task) => sum + (task.storyPoints ?? 0), 0);
   const activeSprint = project.sprints.find((sprint) => sprint.isActive) ?? null;
+  const activeSprintHistory = sprintHistory.find((sprint) => sprint.id === activeSprint?.id);
   const activeSprintTasks = activeSprint
     ? tasks.filter((task) => task.sprint?.id === activeSprint.id)
     : [];
@@ -419,9 +480,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
                   projectId={project.id}
                   currentTeamId={project.team?.id ?? null}
                   teams={managedTeams}
-                  canManage={managedTeams.length > 0 && (
-                    isProjectOwner || project.members.some((membership) => membership.user.id === user.id)
-                  )}
+                  canManage={canManageProject}
                 />
               </div>
               <div className="flex flex-wrap gap-2 text-xs text-white/40">
@@ -483,6 +542,15 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
                       Active
                     </span>
                   </div>
+                  {canManageProject ? (
+                    <div className="mt-3">
+                      <CompleteSprintButton
+                        projectId={project.id}
+                        sprintId={activeSprint.id}
+                        sprintTitle={activeSprint.title}
+                      />
+                    </div>
+                  ) : null}
                   {activeSprint.goal ? (
                     <p className="mt-3 text-sm leading-6 text-white/45">{activeSprint.goal}</p>
                   ) : (
@@ -505,6 +573,21 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
                   <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/10">
                     <div className="h-full rounded-full bg-emerald-400 transition-all" style={{ width: `${Math.min(activeSprintProgress, 100)}%` }} />
                   </div>
+                  {canManageProjectTasks ? (
+                    <SprintBurndownChart
+                      startDate={activeSprintHistory?.startDate?.toISOString() ?? null}
+                      endDate={activeSprintHistory?.endDate?.toISOString() ?? null}
+                      completedAt={activeSprintHistory?.completedAt?.toISOString() ?? null}
+                      isActive={activeSprint.isActive}
+                      snapshots={(activeSprintHistory?.snapshots ?? []).map((snapshot) => ({
+                        snapshotDate: snapshot.snapshotDate.toISOString().slice(0, 10),
+                        scopeTasks: snapshot.scopeTasks,
+                        remainingTasks: snapshot.remainingTasks,
+                      }))}
+                    />
+                  ) : (
+                    <p className="mt-4 text-xs text-white/35">Sprint burndown is available to project owners, team managers, and project members.</p>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
@@ -513,15 +596,68 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
               )}
 
               <div className="mt-4 border-t border-white/[0.07] pt-4">
-                {isProjectOwner ? (
+                {canManageProject ? (
                   <AddSprintForm projectId={project.id} />
                 ) : (
                   <div className="rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
-                    {getPersonLabel(project.owner)} manages sprint cadence for this project.
+                    The project owner or connected team manager manages sprint cadence.
                   </div>
                 )}
               </div>
             </div>
+
+            <section className="rounded-xl border border-white/[0.07] bg-white p-5">
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] pb-3">
+                <div>
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-white/35">Sprint history</h2>
+                  <p className="mt-1 text-sm text-white/40">Completed sprint outcomes and scope.</p>
+                </div>
+                <span className="text-xs text-white/30">{sprintHistory.filter((sprint) => sprint.completedAt).length} completed</span>
+              </div>
+              {sprintHistory.some((sprint) => sprint.completedAt) ? (
+                <div className="mt-3 grid gap-3">
+                  {sprintHistory.filter((sprint) => sprint.completedAt).map((sprint) => (
+                    <article key={sprint.id} className="rounded-xl border border-white/[0.07] bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-white/80">{sprint.title}</h3>
+                          <p className="mt-1 text-xs text-white/35">
+                            Completed {sprint.completedAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                        </div>
+                        {canManageProjectTasks ? (
+                          <span className="text-xs text-white/45">
+                            {sprint.completedTasks ?? 0}/{sprint.scopeTasks ?? 0} issues done
+                          </span>
+                        ) : null}
+                      </div>
+                      {canManageProjectTasks ? (
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/45">
+                          <span className="rounded-full border border-white/10 px-2.5 py-1">{sprint.completedPoints ?? 0}/{sprint.scopePoints ?? 0} points completed</span>
+                          <span className="rounded-full border border-white/10 px-2.5 py-1">{sprint.carriedOverTasks ?? 0} issues moved to backlog</span>
+                          <span className="rounded-full border border-white/10 px-2.5 py-1">{sprint.carriedOverPoints ?? 0} points moved</span>
+                        </div>
+                      ) : null}
+                      {canManageProjectTasks ? (
+                        <SprintBurndownChart
+                          startDate={sprint.startDate?.toISOString() ?? null}
+                          endDate={sprint.endDate?.toISOString() ?? null}
+                          completedAt={sprint.completedAt?.toISOString() ?? null}
+                          isActive={false}
+                          snapshots={sprint.snapshots.map((snapshot) => ({
+                            snapshotDate: snapshot.snapshotDate.toISOString().slice(0, 10),
+                            scopeTasks: snapshot.scopeTasks,
+                            remainingTasks: snapshot.remainingTasks,
+                          }))}
+                        />
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-white/35">Completed sprints will be recorded here after sprint completion.</p>
+              )}
+            </section>
           </section>
         );
       case "board":
@@ -532,13 +668,23 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
             members={teamMembers}
             sprints={sprintOptions}
             currentUserId={user.id}
-            canDeleteTasks={isProjectOwner}
+            canDeleteTasks={canManageProject}
             canManageTasks={canManageProjectTasks}
+            requestedTaskId={requestedTaskId}
           />
         );
       case "team":
         return (
           <section id="team" className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="rounded-xl border border-white/[0.07] bg-white p-5 xl:col-span-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-white/35">Access roles</h2>
+              <div className="mt-4 grid gap-3 text-sm text-white/50 sm:grid-cols-2 xl:grid-cols-4">
+                <p><span className="font-semibold text-white/80">Owner:</span> full project control.</p>
+                <p><span className="font-semibold text-white/80">Team manager:</span> full control when the project is connected to their team.</p>
+                <p><span className="font-semibold text-white/80">Project member:</span> view all issues, create and edit issues, and comment; cannot manage project settings or delete issues.</p>
+                <p><span className="font-semibold text-white/80">Team member:</span> view assigned or unassigned issues, update their own issue status, and comment.</p>
+              </div>
+            </div>
             <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
               <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">Team</h2>
@@ -561,10 +707,14 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
                       </div>
                       <div className="flex shrink-0 items-center gap-3 text-xs text-white/35">
                         <span className="rounded-full border border-white/10 px-2.5 py-1">
-                          {member.role === "OWNER" ? "Owner" : "Member"}
+                          {member.accessRole}
                         </span>
-                        <span>{assignmentStats.open} open</span>
-                        <span>{assignmentStats.total} total assigned</span>
+                        {canManageProjectTasks ? (
+                          <>
+                            <span>{assignmentStats.open} open</span>
+                            <span>{assignmentStats.total} total assigned</span>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -578,15 +728,26 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
                 <p className="mt-1 text-sm text-white/35">Keep membership, ownership, and sprint planning close to the work.</p>
               </div>
 
-              {isProjectOwner ? (
+              {canManageProject ? (
                 <div className="mt-4">
                   <AddMemberForm projectId={project.id} />
                 </div>
               ) : (
                 <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
-                  {getPersonLabel(project.owner)} manages membership for this project.
+                  The project owner or connected team manager manages membership.
                 </div>
               )}
+              <ProjectMembershipControls
+                projectId={project.id}
+                ownerId={project.ownerId}
+                currentUserId={user.id}
+                canManage={canManageProject}
+                members={project.members.map((membership) => ({
+                  id: membership.user.id,
+                  name: membership.user.name,
+                  email: membership.user.email,
+                }))}
+              />
 
               <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4 text-sm text-white/35">
                 Assignees, story points, issue types, and sprint placement are all available directly in the board so planning stays lightweight.

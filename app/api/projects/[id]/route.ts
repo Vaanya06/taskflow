@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { invalidateProjectsForUser } from "@/services/projectService";
 import { accessibleProjectWhere } from "@/project-access";
+import { canManageProject } from "@/lib/project-task-permissions";
 
 type RouteContext = {
   params: Promise<{
@@ -46,7 +47,7 @@ export async function DELETE(
       },
       team: {
         select: {
-          memberships: { select: { userId: true } },
+          memberships: { select: { userId: true, role: true } },
         },
       },
     },
@@ -59,9 +60,9 @@ export async function DELETE(
     );
   }
 
-  if (project.ownerId !== user.id) {
+  if (!canManageProject(project, user.id)) {
     return NextResponse.json(
-      { ok: false, error: "Only the project owner can delete this project." },
+      { ok: false, error: "Only the project owner or connected team manager can delete this project." },
       { status: 403 },
     );
   }
@@ -70,7 +71,16 @@ export async function DELETE(
     const result = await prisma.project.deleteMany({
       where: {
         id: projectId,
-        ownerId: user.id,
+        OR: [
+          { ownerId: user.id },
+          {
+            team: {
+              memberships: {
+                some: { userId: user.id, role: "MANAGER" },
+              },
+            },
+          },
+        ],
       },
     });
 

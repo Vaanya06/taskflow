@@ -189,7 +189,13 @@ export default async function DashboardPage() {
       },
     }),
     prisma.activity.findMany({
-      where: { project: accessibleProjectWhere(user.id) },
+      where: {
+        project: accessibleProjectWhere(user.id),
+        OR: [
+          { taskId: null },
+          { task: { is: accessibleTaskWhere(user.id) } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       take: 10,
       include: {
@@ -328,6 +334,7 @@ export default async function DashboardPage() {
       const memberCount = new Set([project.ownerId, ...project.members.map((member) => member.userId)]).size;
       const isOwner = project.ownerId === user.id;
       const isManagedTeamProject = Boolean(project.team?.memberships.length);
+      const canManageProject = isOwner || isManagedTeamProject;
 
       return {
         ...project,
@@ -340,6 +347,7 @@ export default async function DashboardPage() {
         memberCount,
         isOwner,
         isManagedTeamProject,
+        canManageProject,
         mood: getProjectMood(overdueProjectTasks, dueSoonProjectTasks, activeProjectTasks),
       };
     })
@@ -561,7 +569,7 @@ export default async function DashboardPage() {
                           <Link href={`/projects/${project.id}`} className="accent-button flex h-9 items-center px-3 text-[10px] font-semibold uppercase tracking-[0.14em]">
                             Open
                           </Link>
-                          {project.isOwner ? (
+                          {project.canManageProject ? (
                             <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
                           ) : null}
                         </div>

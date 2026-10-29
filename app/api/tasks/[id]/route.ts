@@ -3,7 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { invalidateTasksByProject } from "@/services/taskService";
 import { accessibleTaskWhere } from "@/project-access";
-import { canManageProjectTasks } from "@/lib/project-task-permissions";
+import { canManageProject, canManageProjectTasks } from "@/lib/project-task-permissions";
+import { recordActiveSprintProgress } from "@/services/sprint-progress";
+import {
+  buildTaskNotifications,
+  getTaskNotificationRecipientIds,
+} from "@/services/notifications";
 
 const ISSUE_TYPES = new Set(["EPIC", "STORY", "TASK", "BUG"]);
 const TASK_STATUSES = new Set(["TODO", "IN_PROGRESS", "DONE"]);
@@ -109,6 +114,7 @@ export async function PATCH(
       title: true,
       status: true,
       assigneeId: true,
+      dueDate: true,
       projectId: true,
       project: {
         select: {
@@ -143,7 +149,7 @@ export async function PATCH(
   }
 
   const teamMembership = task.project.team?.memberships.find((membership) => membership.userId === user.id);
-  if (!canManageProjectTasks(task.project, user.id, user.role)) {
+  if (!canManageProjectTasks(task.project, user.id)) {
     if (!teamMembership || task.assigneeId !== user.id) {
       return NextResponse.json({ ok: false, error: "Team members can update the status of issues assigned to them." }, { status: 403 });
     }
@@ -297,6 +303,10 @@ export async function PATCH(
   }
 
   const shouldLogCompletion = data.status === "DONE" && task.status !== "DONE";
+  const assigneeChanged = "assigneeId" in data && task.assigneeId !== (data.assigneeId ?? null);
+  const dueDateChanged = "dueDate" in data
+    && task.dueDate?.toISOString().slice(0, 10) !== data.dueDate?.toISOString().slice(0, 10);
+  const nextAssigneeId = "assigneeId" in data ? data.assigneeId ?? null : task.assigneeId;
 
   const updatedTask = await prisma.$transaction(async (tx) => {
     const nextTask = await tx.task.update({
@@ -344,10 +354,61 @@ export async function PATCH(
       });
     }
 
+    if (assigneeChanged) {
+      if (nextAssigneeId) {
+        const notifications = buildTaskNotifications({
+          recipientIds: [nextAssigneeId],
+          actorId: user.id,
+          projectId: task.projectId,
+          taskId: nextTask.id,
+          type: "TASK_ASSIGNED",
+          message: `${user.name || user.email} assigned you to "${nextTask.title}"`,
+        });
+        if (notifications.length) {
+          await tx.notification.createMany({ data: notifications });
+        }
+      } else if (task.assigneeId) {
+        const notifications = buildTaskNotifications({
+          recipientIds: [task.assigneeId],
+          actorId: user.id,
+          projectId: task.projectId,
+          taskId: nextTask.id,
+          type: "TASK_UNASSIGNED",
+          message: `${user.name || user.email} unassigned you from "${nextTask.title}"`,
+        });
+        if (notifications.length) {
+          await tx.notification.createMany({ data: notifications });
+        }
+      }
+    }
+
+    if (dueDateChanged) {
+      const newDueDate = data.dueDate;
+      const dueDateLabel = newDueDate
+        ? newDueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+        : "no due date";
+      const notifications = buildTaskNotifications({
+        recipientIds: getTaskNotificationRecipientIds(
+          task.project,
+          nextAssigneeId,
+          nextAssigneeId === null,
+        ),
+        actorId: user.id,
+        projectId: task.projectId,
+        taskId: nextTask.id,
+        type: "DUE_DATE_CHANGED",
+        message: `${user.name || user.email} changed the due date for "${nextTask.title}" to ${dueDateLabel}`,
+      });
+      if (notifications.length) {
+        await tx.notification.createMany({ data: notifications });
+      }
+    }
+
     return nextTask;
   });
 
   await invalidateTasksByProject(task.projectId);
+  await recordActiveSprintProgress(task.projectId);
 
   return NextResponse.json({ ok: true, task: updatedTask });
 }
@@ -383,6 +444,12 @@ export async function DELETE(
       project: {
         select: {
           ownerId: true,
+          members: { select: { userId: true } },
+          team: {
+            select: {
+              memberships: { select: { userId: true, role: true } },
+            },
+          },
         },
       },
     },
@@ -395,9 +462,9 @@ export async function DELETE(
     );
   }
 
-  if (task.project.ownerId !== user.id) {
+  if (!canManageProject(task.project, user.id)) {
     return NextResponse.json(
-      { ok: false, error: "Only the project owner can delete tasks." },
+      { ok: false, error: "Only the project owner or connected team manager can delete tasks." },
       { status: 403 },
     );
   }
@@ -409,6 +476,7 @@ export async function DELETE(
   });
 
   await invalidateTasksByProject(task.projectId);
+  await recordActiveSprintProgress(task.projectId);
 
   return NextResponse.json({ ok: true });
 }

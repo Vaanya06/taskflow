@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accessibleProjectWhere } from "@/project-access";
 import { invalidateProjectsForUser } from "@/services/projectService";
+import { canManageProject } from "@/lib/project-task-permissions";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -19,16 +19,15 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     select: {
       id: true,
       ownerId: true,
-      team: { select: { memberships: { select: { userId: true } } } },
+      team: { select: { memberships: { select: { userId: true, role: true } } } },
       members: { select: { userId: true } },
     },
   });
   if (!project) {
     return NextResponse.json({ ok: false, error: "Project not found." }, { status: 404 });
   }
-  const isProjectMember = project.members.some((member) => member.userId === user.id);
-  if (project.ownerId !== user.id && !isProjectMember) {
-    return NextResponse.json({ ok: false, error: "Only a project owner or member who manages a team can connect it." }, { status: 403 });
+  if (!canManageProject(project, user.id)) {
+    return NextResponse.json({ ok: false, error: "Only the project owner or connected team manager can change team access." }, { status: 403 });
   }
 
   let payload: { teamId?: unknown } | null = null;
@@ -40,9 +39,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
   const teamId = typeof payload?.teamId === "string" && payload.teamId ? payload.teamId : null;
   if (teamId) {
-    if (user.role !== UserRole.MANAGER && user.role !== UserRole.ADMIN) {
-      return NextResponse.json({ ok: false, error: "Manager access is required to connect a team." }, { status: 403 });
-    }
     const managedTeam = await prisma.team.findFirst({
       where: {
         id: teamId,

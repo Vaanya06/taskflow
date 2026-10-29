@@ -90,7 +90,7 @@ export async function POST(
       { status: 404 },
     );
   }
-  if (!canManageProjectTasks(task.project, user.id, user.role)) {
+  if (!canManageProjectTasks(task.project, user.id)) {
     return NextResponse.json({ ok: false, error: "Only project members and team managers can change issue labels." }, { status: 403 });
   }
 
@@ -208,7 +208,7 @@ export async function DELETE(
       { status: 404 },
     );
   }
-  if (!canManageProjectTasks(task.project, user.id, user.role)) {
+  if (!canManageProjectTasks(task.project, user.id)) {
     return NextResponse.json({ ok: false, error: "Only project members and team managers can change issue labels." }, { status: 403 });
   }
 

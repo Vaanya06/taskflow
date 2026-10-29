@@ -69,6 +69,7 @@ type TaskBoardProps = {
   currentUserId: string;
   canDeleteTasks: boolean;
   canManageTasks: boolean;
+  requestedTaskId: string | null;
 };
 
 type NotificationType = "success" | "error" | "info";
@@ -216,6 +217,7 @@ export default function TaskBoard({
   currentUserId,
   canDeleteTasks,
   canManageTasks,
+  requestedTaskId,
 }: TaskBoardProps) {
   const router = useRouter();
   const notificationIdRef = useRef(0);
@@ -257,6 +259,15 @@ export default function TaskBoard({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (requestedTaskId) {
+      document.getElementById(`task-${requestedTaskId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [requestedTaskId, layoutMode]);
 
   const normalizedQuery = normalize(deferredQuery);
   const today = startOfToday();
@@ -549,21 +560,27 @@ export default function TaskBoard({
       </div>
 
       {layoutMode === "BOARD" ? (
-        <div id="board" className="grid gap-6 lg:grid-cols-3">
+        <div id="board" className="grid auto-cols-[minmax(260px,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2">
           {COLUMNS.map((column) => {
             const columnTasks = tasksByStatus[column.status];
             const isActiveDrop = dragOverStatus === column.status;
             return (
-              <div key={column.status} className="flex flex-col gap-4">
-                <div className={`panel-card-soft rounded-[28px] p-4 ${isActiveDrop ? "border-[var(--accent)]/25" : ""}`}>
-                  <div className="flex items-start justify-between gap-3"><div><h2 className="text-base font-semibold text-white/88">{column.label}</h2><p className="text-sm text-white/40">{column.helper}</p></div><span className="badge-pill px-3 py-1 text-[11px]">{columnTasks.length}</span></div>
+              <div key={column.status} className="flex min-w-0 flex-col gap-3">
+                <div className="panel-card-soft rounded-2xl p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-semibold text-white/88">{column.label}</h2>
+                      <p className="mt-1 text-xs text-white/40">{column.helper}</p>
+                    </div>
+                    <span className="badge-pill shrink-0 px-3 py-1 text-[11px]">{columnTasks.length}</span>
+                  </div>
                 </div>
-                <div className={`flex min-h-[120px] flex-col gap-4 rounded-[28px] border border-dashed p-3 transition ${isActiveDrop ? "border-[var(--accent)]/30 bg-[rgba(62,214,177,0.08)]" : "border-white/[0.1] bg-[rgba(7,18,25,0.36)]"}`} onDragOver={(event) => handleDragOver(event, column.status)} onDragLeave={() => setDragOverStatus(null)} onDrop={(event) => handleDrop(event, column.status)}>
+                <div className={`flex min-h-[180px] flex-col gap-3 rounded-2xl border p-3 transition ${isActiveDrop ? "border-[var(--accent)]/40 bg-indigo-50/70" : "border-slate-200/80 bg-slate-100/70"}`} onDragOver={(event) => handleDragOver(event, column.status)} onDragLeave={() => setDragOverStatus(null)} onDrop={(event) => handleDrop(event, column.status)}>
                   {columnTasks.length ? columnTasks.map((task) => (
-                    <div key={task.id} draggable={canManageTasks || task.assignee?.id === currentUserId} onDragStart={(event) => handleDragStart(event, task.id)} onDragEnd={handleDragEnd} className={draggingId === task.id ? "opacity-60" : undefined}>
+                    <div id={`task-${task.id}`} key={task.id} draggable={canManageTasks || task.assignee?.id === currentUserId} onDragStart={(event) => handleDragStart(event, task.id)} onDragEnd={handleDragEnd} className={draggingId === task.id ? "opacity-60" : undefined}>
                       <TaskCard task={task} members={members} sprints={sprints} currentUserId={currentUserId} canDelete={canDeleteTasks} canManageTasks={canManageTasks} projectLabels={projectLabels} onNotify={pushNotification} />
                     </div>
-                  )) : <div className="rounded-[24px] border border-dashed border-white/[0.1] bg-white/[0.03] p-6 text-sm text-white/28">No issues here yet. Drag an issue to update its status.</div>}
+                  )) : <div className="flex min-h-32 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/70 px-5 py-6 text-center text-sm text-slate-500">No issues here yet. Drag an issue to update its status.</div>}
                 </div>
               </div>
             );

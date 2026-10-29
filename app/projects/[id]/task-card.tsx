@@ -487,22 +487,22 @@ export default function TaskCard({
   }
 
   return (
-    <div className="panel-card-soft flex flex-col gap-4 rounded-[28px] p-5">
-      <div className="flex items-start justify-between gap-3">
+    <div className="panel-card-soft flex min-w-0 flex-col gap-4 rounded-2xl p-4">
+      <div className="flex min-w-0 flex-col gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[var(--accent)]/20 bg-[rgba(62,214,177,0.12)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
+            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-700">
               {ISSUE_TYPE_LABELS[task.issueType]}
             </span>
-            {task.storyPoints ? <span className="badge-pill px-3 py-1 text-[11px]">{task.storyPoints} pts</span> : null}
-            <span className="badge-pill px-3 py-1 text-[11px]">{task.sprint ? task.sprint.title : "Backlog"}</span>
+            {task.storyPoints ? <span className="badge-pill px-2.5 py-1 text-[10px]">{task.storyPoints} pts</span> : null}
+            <span className="badge-pill max-w-full truncate px-2.5 py-1 text-[10px]">{task.sprint ? task.sprint.title : "Backlog"}</span>
           </div>
-          <h3 className="mt-3 text-lg font-semibold text-white/88">{task.title}</h3>
-          <p className="mt-2 text-sm leading-7 text-white/46">
+          <h3 className="mt-3 break-words text-base font-semibold leading-6 text-white/88">{task.title}</h3>
+          <p className="mt-1 break-words text-sm leading-6 text-white/46">
             {task.description || "No description yet. Add details, acceptance notes, or implementation hints here."}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-3">
           <button className="accent-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="button" onClick={handleAdvance} disabled={isPending || (!canManageTasks && task.assignee?.id !== currentUserId)} aria-busy={isPending}>
             {nextStatus.label}
           </button>
@@ -529,22 +529,22 @@ export default function TaskCard({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-[22px] border border-white/[0.08] bg-white/[0.04] p-4">
+      <div className="grid min-w-0 grid-cols-2 gap-2">
+        <div className="min-w-0 rounded-xl border border-slate-200 bg-white/70 p-3">
           <p className="text-[11px] uppercase tracking-[0.18em] text-white/28">Status</p>
-          <p className="mt-2 text-sm font-semibold text-white/84">{STATUS_LABELS[task.status]}</p>
+          <p className="mt-1 break-words text-sm font-semibold text-white/84">{STATUS_LABELS[task.status]}</p>
         </div>
-        <div className="rounded-[22px] border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="min-w-0 rounded-xl border border-slate-200 bg-white/70 p-3">
           <p className="text-[11px] uppercase tracking-[0.18em] text-white/28">Priority</p>
-          <p className="mt-2 text-sm font-semibold text-white/84">{PRIORITY_LABELS[task.priority]}</p>
+          <p className="mt-1 break-words text-sm font-semibold text-white/84">{PRIORITY_LABELS[task.priority]}</p>
         </div>
-        <div className="rounded-[22px] border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="min-w-0 rounded-xl border border-slate-200 bg-white/70 p-3">
           <p className="text-[11px] uppercase tracking-[0.18em] text-white/28">Assignee</p>
-          <p className="mt-2 text-sm font-semibold text-white/84">{task.assignee ? getPersonLabel(task.assignee) : "Unassigned"}</p>
+          <p className="mt-1 break-words text-sm font-semibold text-white/84">{task.assignee ? getPersonLabel(task.assignee) : "Unassigned"}</p>
         </div>
-        <div className="rounded-[22px] border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="min-w-0 rounded-xl border border-slate-200 bg-white/70 p-3">
           <p className="text-[11px] uppercase tracking-[0.18em] text-white/28">Due</p>
-          <p className="mt-2 text-sm font-semibold text-white/84">{dueMeta ? dueMeta.label : "No due date"}</p>
+          <p className="mt-1 break-words text-sm font-semibold text-white/84">{dueMeta ? dueMeta.label : "No due date"}</p>
         </div>
       </div>
 
@@ -606,6 +606,7 @@ export default function TaskCard({
         </div>
         <form className="mt-4 flex flex-col gap-2" onSubmit={handleAddComment}>
           <textarea className="soft-input min-h-[90px] rounded-[22px] px-4 py-3 text-sm" placeholder="Write a comment" value={commentBody} onChange={(event) => setCommentBody(event.target.value)} />
+          <p className="text-xs text-white/35">Mention a teammate with their email, like @name@example.com.</p>
           <div className="flex items-center justify-between gap-2">
             {commentError ? <span className="text-xs text-red-300">{commentError}</span> : <span className="text-xs text-white/30">Keep it short, clear, and actionable.</span>}
             <button className="accent-button flex h-10 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="submit" disabled={isPending} aria-busy={isPending}>

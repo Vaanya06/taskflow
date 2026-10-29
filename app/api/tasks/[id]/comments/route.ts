@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { accessibleTaskWhere } from "@/project-access";
+import {
+  buildTaskNotifications,
+  getTaskNotificationRecipientIds,
+} from "@/services/notifications";
 
 type RouteContext = {
   params: Promise<{
@@ -111,6 +115,18 @@ export async function POST(
       id: true,
       title: true,
       projectId: true,
+      assigneeId: true,
+      project: {
+        select: {
+          ownerId: true,
+          members: { select: { userId: true } },
+          team: {
+            select: {
+              memberships: { select: { userId: true, role: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -137,6 +153,27 @@ export async function POST(
       { status: 400 },
     );
   }
+
+  const taskRecipientIds = getTaskNotificationRecipientIds(
+    task.project,
+    task.assigneeId,
+    task.assigneeId === null,
+  );
+  const mentionedEmails = [...new Set(
+    Array.from(content.matchAll(/@([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi))
+      .map((match) => match[1].toLowerCase()),
+  )];
+  const mentionedUsers = mentionedEmails.length
+    ? await prisma.user.findMany({
+        where: {
+          id: { in: taskRecipientIds },
+          email: { in: mentionedEmails, mode: "insensitive" },
+        },
+        select: { id: true },
+      })
+    : [];
+  const mentionedUserIds = new Set(mentionedUsers.map((mentionedUser) => mentionedUser.id));
+  const commenterLabel = user.name || user.email;
 
   const comment = await prisma.$transaction(async (tx) => {
     const createdComment = await tx.comment.create({
@@ -167,6 +204,30 @@ export async function POST(
         taskId,
       },
     });
+
+    const commentNotifications = buildTaskNotifications({
+      recipientIds: taskRecipientIds.filter((recipientId) => !mentionedUserIds.has(recipientId)),
+      actorId: user.id,
+      projectId: task.projectId,
+      taskId,
+      type: "TASK_COMMENTED",
+      message: `${commenterLabel} commented on "${task.title}"`,
+    });
+    if (commentNotifications.length) {
+      await tx.notification.createMany({ data: commentNotifications });
+    }
+
+    const mentionNotifications = buildTaskNotifications({
+      recipientIds: mentionedUsers.map((mentionedUser) => mentionedUser.id),
+      actorId: user.id,
+      projectId: task.projectId,
+      taskId,
+      type: "MENTIONED",
+      message: `${commenterLabel} mentioned you on "${task.title}"`,
+    });
+    if (mentionNotifications.length) {
+      await tx.notification.createMany({ data: mentionNotifications });
+    }
 
     return createdComment;
   });
