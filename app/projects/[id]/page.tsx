@@ -16,6 +16,7 @@ import ProjectTeamControl from "./project-team-control";
 import ProjectMembershipControls from "./project-membership-controls";
 import CompleteSprintButton from "./complete-sprint-button";
 import SprintBurndownChart from "./sprint-burndown-chart";
+import TeamWorkload from "./team-workload";
 import { recordActiveSprintProgress } from "@/services/sprint-progress";
 
 type PageProps = {
@@ -434,20 +435,6 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
   const projectProgress = getCompletion(totalTasks, doneTasks);
   const activeSprintProgress = getCompletion(activeSprintTasks.length, activeSprintDone);
 
-  const assignmentsByMember = new Map<string, { total: number; open: number }>();
-  for (const task of tasks) {
-    if (!task.assignee) {
-      continue;
-    }
-
-    const current = assignmentsByMember.get(task.assignee.id) ?? { total: 0, open: 0 };
-    current.total += 1;
-    if (task.status !== "DONE") {
-      current.open += 1;
-    }
-    assignmentsByMember.set(task.assignee.id, current);
-  }
-
   const renderTabContent = () => {
     switch (normalizedTab) {
       case "overview":
@@ -676,6 +663,15 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
       case "team":
         return (
           <section id="team" className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="xl:col-span-2">
+              <TeamWorkload
+                projectId={project.id}
+                tasks={normalizedTasks}
+                members={teamMembers}
+                currentUserId={user.id}
+                canViewAll={canManageProjectTasks}
+              />
+            </div>
             <div className="rounded-xl border border-white/[0.07] bg-white p-5 xl:col-span-2">
               <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-white/35">Access roles</h2>
               <div className="mt-4 grid gap-3 text-sm text-white/50 sm:grid-cols-2 xl:grid-cols-4">
@@ -692,9 +688,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
               </div>
 
               <div className="divide-y divide-white/[0.04]">
-                {teamMembers.map((member) => {
-                  const assignmentStats = assignmentsByMember.get(member.id) ?? { total: 0, open: 0 };
-                  return (
+                {teamMembers.map((member) => (
                     <div key={member.id} className="flex items-center justify-between gap-4 px-5 py-4">
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-xs font-semibold text-indigo-200">
@@ -709,16 +703,9 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
                         <span className="rounded-full border border-white/10 px-2.5 py-1">
                           {member.accessRole}
                         </span>
-                        {canManageProjectTasks ? (
-                          <>
-                            <span>{assignmentStats.open} open</span>
-                            <span>{assignmentStats.total} total assigned</span>
-                          </>
-                        ) : null}
                       </div>
                     </div>
-                  );
-                })}
+                ))}
               </div>
             </div>
 
