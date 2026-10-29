@@ -63,6 +63,7 @@ export default function AddMemberForm({ projectId }: AddMemberFormProps) {
         type="submit"
         disabled={isPending}
         aria-busy={isPending}
+        style={{ color: "#ffffff" }}
       >
         {isPending ? "Adding teammate..." : "Add teammate"}
       </button>

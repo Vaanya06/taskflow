@@ -14,6 +14,9 @@ type PageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams?: Promise<{
+    tab?: string;
+  }>;
 };
 
 type WorkspaceMember = {
@@ -22,21 +25,6 @@ type WorkspaceMember = {
   email: string;
   role: "OWNER" | "MEMBER";
 };
-
-type IssueType = "EPIC" | "STORY" | "TASK" | "BUG";
-
-const ISSUE_TYPE_LABELS: Record<IssueType, string> = {
-  EPIC: "Epic",
-  STORY: "Story",
-  TASK: "Task",
-  BUG: "Bug",
-};
-
-const PRIORITY_WEIGHT = {
-  HIGH: 0,
-  MEDIUM: 1,
-  LOW: 2,
-} as const;
 
 function startOfToday() {
   const now = new Date();
@@ -108,13 +96,18 @@ function getCompletion(total: number, done: number) {
   return (done / total) * 100;
 }
 
-export default async function ProjectPage({ params }: PageProps) {
+export default async function ProjectPage({ params, searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
   }
 
   const projectId = (await params).id;
+  const activeTab = (await searchParams)?.tab ?? "board";
+  const tabValues = ["overview", "planning", "board", "team", "activity"] as const;
+  const normalizedTab = tabValues.includes(activeTab as (typeof tabValues)[number])
+    ? (activeTab as (typeof tabValues)[number])
+    : "board";
 
   const project = await prisma.project.findFirst({
     where: {
@@ -388,45 +381,249 @@ export default async function ProjectPage({ params }: PageProps) {
     assignmentsByMember.set(task.assignee.id, current);
   }
 
-  const backlogPreview = backlogOpenTasks
-    .slice()
-    .sort((left, right) => {
-      const priorityDifference = PRIORITY_WEIGHT[left.priority] - PRIORITY_WEIGHT[right.priority];
-      if (priorityDifference !== 0) {
-        return priorityDifference;
-      }
+  const renderTabContent = () => {
+    switch (normalizedTab) {
+      case "overview":
+        return (
+          <header id="overview" className="rounded-xl border border-white/[0.07] bg-white p-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/30">
+              Project Workspace
+            </p>
+            <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight text-white/90">
+                  {project.title}
+                </h1>
+                {project.description ? (
+                  <p className="mt-2 max-w-2xl text-sm leading-7 text-white/40">
+                    {project.description}
+                  </p>
+                ) : (
+                  <p className="mt-2 max-w-2xl text-sm leading-7 text-white/30">
+                    Plan the backlog, run sprints, and keep shared ownership visible in one place.
+                  </p>
+                )}
+                <p className="mt-3 text-xs text-slate-500">
+                  Shared project issues are managed here; personal to-dos stay separate.
+                </p>
+                {project.team ? (
+                  <p className="mt-2 text-sm font-medium text-indigo-700">Team: {project.team.name}</p>
+                ) : null}
+                <ProjectTeamControl
+                  projectId={project.id}
+                  currentTeamId={project.team?.id ?? null}
+                  teams={managedTeams}
+                  canManage={managedTeams.length > 0 && (
+                    isProjectOwner || project.members.some((membership) => membership.user.id === user.id)
+                  )}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-white/40">
+                <span className="rounded-full border border-white/10 px-3 py-2">{totalTasks} issues</span>
+                <span className="rounded-full border border-white/10 px-3 py-2">{backlogOpenTasks.length} backlog</span>
+                <span className="rounded-full border border-white/10 px-3 py-2">{project.sprints.length} sprints</span>
+                <span className="rounded-full border border-white/10 px-3 py-2">{teamMembers.length} teammates</span>
+              </div>
+            </div>
+          </header>
+        );
+      case "planning":
+        return (
+          <section id="planning" className="grid gap-5">
+            <div className="grid gap-4 xl:grid-cols-4">
+              <div className="rounded-xl border border-white/[0.07] bg-white p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Project progress</p>
+                <p className="mt-2 text-3xl font-semibold text-white/90">{formatPercent(projectProgress)}</p>
+                <p className="text-sm text-white/35">{doneTasks} of {totalTasks} issues completed</p>
+              </div>
+              <div className="rounded-xl border border-white/[0.07] bg-white p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Active sprint scope</p>
+                <p className="mt-2 text-3xl font-semibold text-white/90">{activeSprintTasks.length}</p>
+                <p className="text-sm text-white/35">{activeSprint ? `${activeSprintOpen} open / ${activeSprintPoints} points` : "Start a sprint to focus the team"}</p>
+              </div>
+              <div className="rounded-xl border border-white/[0.07] bg-white p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Backlog ready</p>
+                <p className="mt-2 text-3xl font-semibold text-white/90">{backlogOpenTasks.length}</p>
+                <p className="text-sm text-white/35">{backlogPoints} points waiting to be planned</p>
+              </div>
+              <div className="rounded-xl border border-white/[0.07] bg-white p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Assigned to me</p>
+                <p className="mt-2 text-3xl font-semibold text-white/90">{assignedToMe}</p>
+                <p className="text-sm text-white/35">{inProgressTasks} issues currently in motion</p>
+              </div>
+            </div>
 
-      if (left.dueDate && right.dueDate) {
-        const dueDifference = left.dueDate.getTime() - right.dueDate.getTime();
-        if (dueDifference !== 0) {
-          return dueDifference;
-        }
-      }
+            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
+              <div className="border-b border-white/[0.07] pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Sprint control</p>
+                    <p className="mt-1 text-sm text-white/35">Set the active sprint and shape what the board should optimize for.</p>
+                  </div>
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/35">
+                    {activeSprint ? "Active sprint live" : "Backlog mode"}
+                  </span>
+                </div>
+              </div>
 
-      if (left.dueDate) {
-        return -1;
-      }
+              {activeSprint ? (
+                <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white/85">{activeSprint.title}</p>
+                      <p className="mt-1 text-xs text-white/35">{formatSprintWindow(activeSprint.startDate, activeSprint.endDate)}</p>
+                    </div>
+                    <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300">
+                      Active
+                    </span>
+                  </div>
+                  {activeSprint.goal ? (
+                    <p className="mt-3 text-sm leading-6 text-white/45">{activeSprint.goal}</p>
+                  ) : (
+                    <p className="mt-3 text-sm leading-6 text-white/28">No sprint goal yet.</p>
+                  )}
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/25">Progress</p>
+                      <p className="mt-2 text-lg font-semibold text-white/85">{formatPercent(activeSprintProgress)}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/25">Open issues</p>
+                      <p className="mt-2 text-lg font-semibold text-white/85">{activeSprintOpen}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/25">Points</p>
+                      <p className="mt-2 text-lg font-semibold text-white/85">{activeSprintPoints}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-emerald-400 transition-all" style={{ width: `${Math.min(activeSprintProgress, 100)}%` }} />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
+                  Nothing is active yet. Keep using the backlog, or create a sprint to define the team&apos;s current scope.
+                </div>
+              )}
 
-      if (right.dueDate) {
-        return 1;
-      }
+              <div className="mt-4 border-t border-white/[0.07] pt-4">
+                {isProjectOwner ? (
+                  <AddSprintForm projectId={project.id} />
+                ) : (
+                  <div className="rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
+                    {getPersonLabel(project.owner)} manages sprint cadence for this project.
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        );
+      case "board":
+        return (
+          <TaskBoard
+            projectId={project.id}
+            tasks={normalizedTasks}
+            members={teamMembers}
+            sprints={sprintOptions}
+            currentUserId={user.id}
+            canDeleteTasks={isProjectOwner}
+            canManageTasks={canManageProjectTasks}
+          />
+        );
+      case "team":
+        return (
+          <section id="team" className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
+              <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">Team</h2>
+                <span className="text-xs text-white/25">{teamMembers.length} people</span>
+              </div>
 
-      return right.updatedAt.getTime() - left.updatedAt.getTime();
-    })
-    .slice(0, 5);
+              <div className="divide-y divide-white/[0.04]">
+                {teamMembers.map((member) => {
+                  const assignmentStats = assignmentsByMember.get(member.id) ?? { total: 0, open: 0 };
+                  return (
+                    <div key={member.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-xs font-semibold text-indigo-200">
+                          {getInitials(member)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white/80">{getPersonLabel(member)}</p>
+                          <p className="truncate text-xs text-white/30">{member.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3 text-xs text-white/35">
+                        <span className="rounded-full border border-white/10 px-2.5 py-1">
+                          {member.role === "OWNER" ? "Owner" : "Member"}
+                        </span>
+                        <span>{assignmentStats.open} open</span>
+                        <span>{assignmentStats.total} total assigned</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-  const sprintSummaries = project.sprints.map((sprint) => {
-    const sprintTasks = tasks.filter((task) => task.sprint?.id === sprint.id);
-    const sprintPoints = sprintTasks.reduce((sum, task) => sum + (task.storyPoints ?? 0), 0);
-    const sprintDone = sprintTasks.filter((task) => task.status === "DONE").length;
+            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
+              <div className="border-b border-white/[0.07] pb-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Collaboration</p>
+                <p className="mt-1 text-sm text-white/35">Keep membership, ownership, and sprint planning close to the work.</p>
+              </div>
 
-    return {
-      ...sprint,
-      issueCount: sprintTasks.length,
-      pointCount: sprintPoints,
-      progress: getCompletion(sprintTasks.length, sprintDone),
-    };
-  });
+              {isProjectOwner ? (
+                <div className="mt-4">
+                  <AddMemberForm projectId={project.id} />
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
+                  {getPersonLabel(project.owner)} manages membership for this project.
+                </div>
+              )}
+
+              <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4 text-sm text-white/35">
+                Assignees, story points, issue types, and sprint placement are all available directly in the board so planning stays lightweight.
+              </div>
+              <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4 text-sm text-white/35">
+                {overdueTasks} overdue and {dueSoonTasks} due soon. Use the filters below to isolate risk before it blocks the sprint.
+              </div>
+            </div>
+          </section>
+        );
+      case "activity":
+        return (
+          <section id="activity" className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
+            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">Project activity</h2>
+              <span className="text-xs text-white/25">Latest 8 events</span>
+            </div>
+
+            {activities.length ? (
+              <div className="divide-y divide-white/[0.04]">
+                {activities.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                    <p className="text-sm text-white/50">
+                      <span className="font-medium text-white/75">{activity.user.name || activity.user.email}</span>{" "}
+                      {activity.message}
+                    </p>
+                    <span className="shrink-0 text-xs text-white/25">
+                      {formatActivityDate(activity.createdAt)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-5 py-12 text-center text-sm text-white/25">
+                No activity yet. Create issues, comments, or sprints to build the timeline.
+              </div>
+            )}
+          </section>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <WorkspaceShell
@@ -434,16 +631,17 @@ export default async function ProjectPage({ params }: PageProps) {
       currentWorkspace="projects"
       navItems={[
         { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
-        { href: "#overview", label: "Overview", icon: "folder" },
+        { href: `?tab=overview`, label: "Overview", icon: "folder", active: normalizedTab === "overview" },
         {
-          href: "#planning",
+          href: `?tab=planning`,
           label: "Planning",
           icon: "reports",
           badge: String(activeSprintTasks.length || backlogOpenTasks.length),
+          active: normalizedTab === "planning",
         },
-        { href: "#board", label: "Board", icon: "board", badge: String(tasks.length), active: true },
-        { href: "#team", label: "Team", icon: "team", badge: String(teamMembers.length) },
-        { href: "#activity", label: "Activity", icon: "activity" },
+        { href: `?tab=board`, label: "Board", icon: "board", badge: String(tasks.length), active: normalizedTab === "board" },
+        { href: `?tab=team`, label: "Team", icon: "team", badge: String(teamMembers.length), active: normalizedTab === "team" },
+        { href: `?tab=activity`, label: "Activity", icon: "activity", active: normalizedTab === "activity" },
       ]}
       userName={user.name || user.email}
       userEmail={user.email}
@@ -466,378 +664,7 @@ export default async function ProjectPage({ params }: PageProps) {
       }
     >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-        <header
-          id="overview"
-          className="rounded-xl border border-white/[0.07] bg-white p-6"
-        >
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/30">
-            Project Workspace
-          </p>
-          <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-white/90">
-                {project.title}
-              </h1>
-              {project.description ? (
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-white/40">
-                  {project.description}
-                </p>
-              ) : (
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-white/30">
-                  Plan the backlog, run sprints, and keep shared ownership visible in one place.
-                </p>
-              )}
-              <p className="mt-3 text-xs text-slate-500">
-                Shared project issues are managed here; personal to-dos stay separate.
-              </p>
-              {project.team ? (
-                <p className="mt-2 text-sm font-medium text-indigo-700">Team: {project.team.name}</p>
-              ) : null}
-              <ProjectTeamControl
-                projectId={project.id}
-                currentTeamId={project.team?.id ?? null}
-                teams={managedTeams}
-                canManage={managedTeams.length > 0 && (
-                  isProjectOwner || project.members.some((membership) => membership.user.id === user.id)
-                )}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs text-white/40">
-              <span className="rounded-full border border-white/10 px-3 py-2">{totalTasks} issues</span>
-              <span className="rounded-full border border-white/10 px-3 py-2">{backlogOpenTasks.length} backlog</span>
-              <span className="rounded-full border border-white/10 px-3 py-2">{project.sprints.length} sprints</span>
-              <span className="rounded-full border border-white/10 px-3 py-2">{teamMembers.length} teammates</span>
-            </div>
-          </div>
-        </header>
-
-        <section id="planning" className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
-                Project progress
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-white/90">{formatPercent(projectProgress)}</p>
-              <p className="text-sm text-white/35">{doneTasks} of {totalTasks} issues completed</p>
-            </div>
-            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
-                Active sprint scope
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-white/90">{activeSprintTasks.length}</p>
-              <p className="text-sm text-white/35">{activeSprint ? `${activeSprintOpen} open / ${activeSprintPoints} points` : "Start a sprint to focus the team"}</p>
-            </div>
-            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
-                Backlog ready
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-white/90">{backlogOpenTasks.length}</p>
-              <p className="text-sm text-white/35">{backlogPoints} points waiting to be planned</p>
-            </div>
-            <div className="rounded-xl border border-white/[0.07] bg-white p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
-                Assigned to me
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-white/90">{assignedToMe}</p>
-              <p className="text-sm text-white/35">{inProgressTasks} issues currently in motion</p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-white/[0.07] bg-white p-5">
-            <div className="border-b border-white/[0.07] pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
-                    Sprint control
-                  </p>
-                  <p className="mt-1 text-sm text-white/35">
-                    Set the active sprint and shape what the board should optimize for.
-                  </p>
-                </div>
-                <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-white/35">
-                  {activeSprint ? "Active sprint live" : "Backlog mode"}
-                </span>
-              </div>
-            </div>
-
-            {activeSprint ? (
-              <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-white/85">{activeSprint.title}</p>
-                    <p className="mt-1 text-xs text-white/35">
-                      {formatSprintWindow(activeSprint.startDate, activeSprint.endDate)}
-                    </p>
-                  </div>
-                  <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300">
-                    Active
-                  </span>
-                </div>
-                {activeSprint.goal ? (
-                  <p className="mt-3 text-sm leading-6 text-white/45">{activeSprint.goal}</p>
-                ) : (
-                  <p className="mt-3 text-sm leading-6 text-white/28">No sprint goal yet.</p>
-                )}
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-white/25">Progress</p>
-                    <p className="mt-2 text-lg font-semibold text-white/85">{formatPercent(activeSprintProgress)}</p>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-white/25">Open issues</p>
-                    <p className="mt-2 text-lg font-semibold text-white/85">{activeSprintOpen}</p>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-white/25">Points</p>
-                    <p className="mt-2 text-lg font-semibold text-white/85">{activeSprintPoints}</p>
-                  </div>
-                </div>
-                <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-emerald-400 transition-all"
-                    style={{ width: `${Math.min(activeSprintProgress, 100)}%` }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
-                Nothing is active yet. Keep using the backlog, or create a sprint to define the team&apos;s current scope.
-              </div>
-            )}
-
-            <div className="mt-4 border-t border-white/[0.07] pt-4">
-              {isProjectOwner ? (
-                <AddSprintForm projectId={project.id} />
-              ) : (
-                <div className="rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
-                  {getPersonLabel(project.owner)} manages sprint cadence for this project.
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
-            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
-              <div>
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">
-                  Backlog candidates
-                </h2>
-                <p className="mt-1 text-sm text-white/35">
-                  The strongest items to pull into the next sprint.
-                </p>
-              </div>
-              <span className="text-xs text-white/25">{backlogOpenTasks.length} open</span>
-            </div>
-
-            {backlogPreview.length ? (
-              <div className="divide-y divide-white/[0.04]">
-                {backlogPreview.map((task) => (
-                  <div key={task.id} className="px-5 py-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-200">
-                            {ISSUE_TYPE_LABELS[task.issueType]}
-                          </span>
-                          <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] text-white/40">
-                            {task.priority.toLowerCase()} priority
-                          </span>
-                          {task.storyPoints ? (
-                            <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] text-white/40">
-                              {task.storyPoints} pts
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-3 truncate text-sm font-semibold text-white/85">
-                          {task.title}
-                        </p>
-                        <p className="mt-1 text-xs text-white/35">
-                          {task.assignee ? `Assigned to ${getPersonLabel(task.assignee)}` : "Unassigned"}
-                          {task.labels.length ? ` / ${task.labels.length} labels` : " / No labels"}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-xs text-white/30">
-                        {task.dueDate ? formatDueDate(task.dueDate) : "No due date"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="px-5 py-12 text-center text-sm text-white/25">
-                No open backlog items right now. New issues without a sprint will show up here.
-              </div>
-            )}
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
-            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
-              <div>
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">
-                  Sprint cadence
-                </h2>
-                <p className="mt-1 text-sm text-white/35">
-                  Every sprint in this workspace with scope and progress.
-                </p>
-              </div>
-              <span className="text-xs text-white/25">{project.sprints.length} total</span>
-            </div>
-
-            {sprintSummaries.length ? (
-              <div className="divide-y divide-white/[0.04]">
-                {sprintSummaries.map((sprint) => (
-                  <div key={sprint.id} className="px-5 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-white/82">{sprint.title}</p>
-                          {sprint.isActive ? (
-                            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-300">
-                              Active
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-1 text-xs text-white/35">
-                          {formatSprintWindow(sprint.startDate, sprint.endDate)}
-                        </p>
-                        <p className="mt-2 text-xs text-white/30">
-                          {sprint.goal || "No sprint goal yet."}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right text-xs text-white/35">
-                        <p>{sprint.issueCount} issues</p>
-                        <p>{sprint.pointCount} points</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-indigo-500"
-                        style={{ width: `${Math.min(sprint.progress, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="px-5 py-12 text-center text-sm text-white/25">
-                No sprints yet. Create the first one to start running iterations here.
-              </div>
-            )}
-          </div>
-        </section>
-
-        <TaskBoard
-          projectId={project.id}
-          tasks={normalizedTasks}
-          members={teamMembers}
-          sprints={sprintOptions}
-          currentUserId={user.id}
-          canDeleteTasks={isProjectOwner}
-          canManageTasks={canManageProjectTasks}
-        />
-
-        <section id="team" className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="overflow-hidden rounded-xl border border-white/[0.07] bg-white">
-            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">
-                Team
-              </h2>
-              <span className="text-xs text-white/25">{teamMembers.length} people</span>
-            </div>
-
-            <div className="divide-y divide-white/[0.04]">
-              {teamMembers.map((member) => {
-                const assignmentStats = assignmentsByMember.get(member.id) ?? { total: 0, open: 0 };
-                return (
-                  <div key={member.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-xs font-semibold text-indigo-200">
-                        {getInitials(member)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white/80">
-                          {getPersonLabel(member)}
-                        </p>
-                        <p className="truncate text-xs text-white/30">{member.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3 text-xs text-white/35">
-                      <span className="rounded-full border border-white/10 px-2.5 py-1">
-                        {member.role === "OWNER" ? "Owner" : "Member"}
-                      </span>
-                      <span>{assignmentStats.open} open</span>
-                      <span>{assignmentStats.total} total assigned</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-white/[0.07] bg-white p-5">
-            <div className="border-b border-white/[0.07] pb-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/30">
-                Collaboration
-              </p>
-              <p className="mt-1 text-sm text-white/35">
-                Keep membership, ownership, and sprint planning close to the work.
-              </p>
-            </div>
-
-            {isProjectOwner ? (
-              <div className="mt-4">
-                <AddMemberForm projectId={project.id} />
-              </div>
-            ) : (
-              <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] bg-slate-50 p-5 text-sm text-white/30">
-                {getPersonLabel(project.owner)} manages membership for this project.
-              </div>
-            )}
-
-            <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4 text-sm text-white/35">
-              Assignees, story points, issue types, and sprint placement are all available directly in the board so planning stays lightweight.
-            </div>
-            <div className="mt-4 rounded-xl border border-white/[0.07] bg-slate-50 p-4 text-sm text-white/35">
-              {overdueTasks} overdue and {dueSoonTasks} due soon. Use the filters below to isolate risk before it blocks the sprint.
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="activity"
-          className="overflow-hidden rounded-xl border border-white/[0.07] bg-white"
-        >
-          <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-white/30">
-              Project activity
-            </h2>
-            <span className="text-xs text-white/25">Latest 8 events</span>
-          </div>
-
-          {activities.length ? (
-            <div className="divide-y divide-white/[0.04]">
-              {activities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                  <p className="text-sm text-white/50">
-                    <span className="font-medium text-white/75">
-                      {activity.user.name || activity.user.email}
-                    </span>{" "}
-                    {activity.message}
-                  </p>
-                  <span className="shrink-0 text-xs text-white/25">
-                    {formatActivityDate(activity.createdAt)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="px-5 py-12 text-center text-sm text-white/25">
-              No activity yet. Create issues, comments, or sprints to build the timeline.
-            </div>
-          )}
-        </section>
+        {renderTabContent()}
       </div>
     </WorkspaceShell>
   );

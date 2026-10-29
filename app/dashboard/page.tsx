@@ -482,164 +482,190 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[1.12fr_0.88fr]">
-          <section id="projects" className="panel-card rounded-[34px] p-6">
-            <div className="flex flex-col gap-2 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <section id="projects" className="panel-card rounded-[34px] p-6">
+          <div className="flex flex-col gap-2 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Projects</p>
+              <p className="mt-2 text-sm text-white/42">Every workspace with progress, pressure, and team context.</p>
+            </div>
+            <span className="text-xs text-white/30">{projectSnapshots.length} total</span>
+          </div>
+
+          {projectSnapshots.length ? (
+            <div className="mt-5 overflow-x-auto">
+              <table className="w-full min-w-[1000px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-white/[0.08] text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                    <th scope="col" className="px-3 py-3">Project</th>
+                    <th scope="col" className="px-3 py-3">Created</th>
+                    <th scope="col" className="px-3 py-3">Tasks</th>
+                    <th scope="col" className="px-3 py-3">Team</th>
+                    <th scope="col" className="px-3 py-3">Progress</th>
+                    <th scope="col" className="px-3 py-3">Due</th>
+                    <th scope="col" className="px-3 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projectSnapshots.map((project) => (
+                    <tr key={project.id} className="border-b border-white/[0.06] last:border-0">
+                      <th scope="row" className="max-w-[260px] px-3 py-4 text-left align-top font-normal">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,rgba(62,214,177,0.16),rgba(127,211,247,0.18))] text-[var(--accent)]">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                              <path d="M2 5C2 4.17 2.67 3.5 3.5 3.5H6L7.5 5H12.5C13.33 5 14 5.67 14 6.5V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V5Z" stroke="currentColor" strokeWidth="1.2" />
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="truncate text-sm font-semibold text-white/88">{project.title}</span>
+                              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${project.mood.className}`}>
+                                {project.mood.label}
+                              </span>
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/42">
+                              {project.description || "Keep tasks, owners, and updates aligned from one workspace."}
+                            </p>
+                          </div>
+                        </div>
+                      </th>
+                      <td className="whitespace-nowrap px-3 py-4 align-top text-xs text-white/48">
+                        {formatProjectDate(project.createdAt)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 align-top text-xs text-white/48">
+                        <p>{project.doneProjectTasks}/{project.totalProjectTasks} done</p>
+                        <p className="mt-1 text-white/32">{project.activeProjectTasks} active</p>
+                      </td>
+                      <td className="px-3 py-4 align-top text-xs text-white/48">
+                        <p>{project.memberCount} teammates</p>
+                        <p className="mt-1 whitespace-nowrap text-white/32">
+                          {project.isOwner ? "Owner" : `Shared by ${getPersonLabel(project.owner)}`}
+                        </p>
+                      </td>
+                      <td className="min-w-[130px] px-3 py-4 align-top">
+                        <p className="text-xs text-white/58">{project.progress}% complete</p>
+                        <div
+                          className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"
+                          role="progressbar"
+                          aria-label={`${project.title} completion`}
+                          aria-valuenow={project.progress}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                        >
+                          <div className="h-full rounded-full bg-[linear-gradient(135deg,rgba(62,214,177,1),rgba(127,211,247,0.82))]" style={{ width: `${project.progress}%` }} />
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 align-top text-xs text-white/48">
+                        <p>{project.dueSoonProjectTasks} due soon</p>
+                        <p className="mt-1 text-white/32">{project.overdueProjectTasks} overdue</p>
+                      </td>
+                      <td className="px-3 py-4 align-top">
+                        <div className="flex items-center gap-2">
+                          <Link href={`/projects/${project.id}`} className="accent-button flex h-9 items-center px-3 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                            Open
+                          </Link>
+                          {project.isOwner ? (
+                            <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-[28px] border border-dashed border-white/[0.1] bg-white/[0.03] px-5 py-12 text-center text-sm text-white/30">
+              No projects yet. Create one or join a shared workspace to get started.
+            </div>
+          )}
+        </section>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+          <section id="deadlines" className="panel-card rounded-[34px] p-6">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Projects</p>
-                <p className="mt-2 text-sm text-white/42">Every workspace with progress, pressure, and team context.</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Upcoming deadlines</p>
+                <p className="mt-2 text-sm text-white/42">Next 7 days plus anything already overdue.</p>
               </div>
-              <span className="text-xs text-white/30">{projectSnapshots.length} total</span>
+              <span className="text-xs text-white/30">{upcomingTasks.length} issues</span>
             </div>
 
-            {projectSnapshots.length ? (
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                {projectSnapshots.map((project) => (
-                  <div key={project.id} className="panel-card-soft panel-hover rounded-[30px] p-5">
+            {upcomingTasks.length ? (
+              <div className="mt-4 grid gap-3">
+                {upcomingTasks.map((task) => (
+                  <div key={task.id} className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(62,214,177,0.16),rgba(127,211,247,0.18))] text-[var(--accent)]">
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M2 5C2 4.17 2.67 3.5 3.5 3.5H6L7.5 5H12.5C13.33 5 14 5.67 14 6.5V11.5C14 12.33 13.33 13 12.5 13H3.5C2.67 13 2 12.33 2 11.5V5Z" stroke="currentColor" strokeWidth="1.2" />
-                          </svg>
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="truncate text-lg font-semibold text-white/88">{project.title}</h3>
-                            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${project.mood.className}`}>
-                              {project.mood.label}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm leading-7 text-white/42">
-                            {project.description || "Keep tasks, owners, and updates aligned from one workspace."}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white/86">{task.title}</p>
+                        <p className="mt-1 text-xs text-white/36">
+                          {task.project.title} / {task.assignee ? getPersonLabel(task.assignee) : "Unassigned"}
+                        </p>
+                      </div>
+                      {task.dueDate ? (
+                        <div className="text-right">
+                          <p className="text-sm text-white/78">{formatDueDate(task.dueDate)}</p>
+                          <p className={`text-xs ${startOfDate(task.dueDate) < today ? "text-red-300" : "text-amber-300"}`}>
+                            {formatRelativeDueDate(task.dueDate)}
                           </p>
                         </div>
+                      ) : null}
+                    </div>
+                    <p className={`mt-3 text-xs font-semibold uppercase tracking-[0.18em] ${getPriorityTone(task.priority)}`}>
+                      {task.priority.toLowerCase()} priority
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-[28px] border border-dashed border-white/[0.1] bg-white/[0.03] px-5 py-12 text-center text-sm text-white/30">
+                Nothing urgent right now. Due dates for the next week will show up here.
+              </div>
+            )}
+          </section>
+
+          <section className="panel-card rounded-[34px] p-6">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">My project queue</p>
+                <p className="mt-2 text-sm text-white/42">Shared project issues assigned to you. Manage their status in the project.</p>
+              </div>
+              <span className="text-xs text-white/30">{assignedToMeOpen.length} open</span>
+            </div>
+
+            {myQueue.length ? (
+              <div className="mt-4 grid gap-3">
+                {myQueue.map((task) => (
+                  <div key={task.id} className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white/86">{task.title}</p>
+                        <p className="mt-1 text-xs text-white/36">{task.project.title}</p>
                       </div>
-                      <span className="text-xs text-white/30">{formatProjectDate(project.createdAt)}</span>
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${task.priority === "HIGH" ? "border-red-500/20 bg-red-500/10 text-red-300" : task.priority === "MEDIUM" ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-sky-500/20 bg-sky-500/10 text-sky-300"}`}>
+                        {task.priority.toLowerCase()}
+                      </span>
                     </div>
-
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full rounded-full bg-[linear-gradient(135deg,rgba(62,214,177,1),rgba(127,211,247,0.82))]" style={{ width: `${project.progress}%` }} />
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-white/48">
-                      <span className="badge-pill">{project.doneProjectTasks}/{project.totalProjectTasks} done</span>
-                      <span className="badge-pill">{project.activeProjectTasks} active</span>
-                      <span className="badge-pill">{project.memberCount} teammates</span>
-                      <span className="badge-pill">{project.isOwner ? "Owner" : `Shared by ${getPersonLabel(project.owner)}`}</span>
-                    </div>
-
-                    <div className="mt-5 flex items-center justify-between gap-3">
-                      <div className="text-sm text-white/40">
-                        <p>{project.progress}% complete</p>
-                        <p className="mt-1">{project.dueSoonProjectTasks} due soon / {project.overdueProjectTasks} overdue</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Link href={`/projects/${project.id}`} className="accent-button flex h-10 items-center px-4 text-xs font-semibold uppercase tracking-[0.16em]">
-                          Open
+                    <div className="mt-3 flex items-center justify-between text-xs text-white/36">
+                      <span>{task.status === "IN_PROGRESS" ? "In progress" : "Queued up"}</span>
+                      <span className="flex items-center gap-3">
+                        {task.dueDate ? formatRelativeDueDate(task.dueDate) : "No due date"}
+                        <Link
+                          href={`/projects/${task.projectId}`}
+                          className="font-semibold text-indigo-600 hover:text-indigo-800"
+                        >
+                          Open project
                         </Link>
-                        {project.isOwner ? (
-                          <DeleteProjectButton projectId={project.id} projectTitle={project.title} />
-                        ) : null}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-[28px] border border-dashed border-white/[0.1] bg-white/[0.03] px-5 py-12 text-center text-sm text-white/30">
-                No projects yet. Create one or join a shared workspace to get started.
+              <div className="mt-4 rounded-[28px] border border-dashed border-white/[0.1] bg-white/[0.03] px-5 py-12 text-center text-sm text-white/30">
+                Nothing assigned to you right now. Fresh work will land here automatically.
               </div>
             )}
           </section>
-
-          <div className="flex flex-col gap-6">
-            <section id="deadlines" className="panel-card rounded-[34px] p-6">
-              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Upcoming deadlines</p>
-                  <p className="mt-2 text-sm text-white/42">Next 7 days plus anything already overdue.</p>
-                </div>
-                <span className="text-xs text-white/30">{upcomingTasks.length} issues</span>
-              </div>
-
-              {upcomingTasks.length ? (
-                <div className="mt-4 grid gap-3">
-                  {upcomingTasks.map((task) => (
-                    <div key={task.id} className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] px-4 py-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white/86">{task.title}</p>
-                          <p className="mt-1 text-xs text-white/36">
-                            {task.project.title} / {task.assignee ? getPersonLabel(task.assignee) : "Unassigned"}
-                          </p>
-                        </div>
-                        {task.dueDate ? (
-                          <div className="text-right">
-                            <p className="text-sm text-white/78">{formatDueDate(task.dueDate)}</p>
-                            <p className={`text-xs ${startOfDate(task.dueDate) < today ? "text-red-300" : "text-amber-300"}`}>
-                              {formatRelativeDueDate(task.dueDate)}
-                            </p>
-                          </div>
-                        ) : null}
-                      </div>
-                      <p className={`mt-3 text-xs font-semibold uppercase tracking-[0.18em] ${getPriorityTone(task.priority)}`}>
-                        {task.priority.toLowerCase()} priority
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 rounded-[28px] border border-dashed border-white/[0.1] bg-white/[0.03] px-5 py-12 text-center text-sm text-white/30">
-                  Nothing urgent right now. Due dates for the next week will show up here.
-                </div>
-              )}
-            </section>
-
-            <section className="panel-card rounded-[34px] p-6">
-              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">My project queue</p>
-                  <p className="mt-2 text-sm text-white/42">Shared project issues assigned to you. Manage their status in the project.</p>
-                </div>
-                <span className="text-xs text-white/30">{assignedToMeOpen.length} open</span>
-              </div>
-
-              {myQueue.length ? (
-                <div className="mt-4 grid gap-3">
-                  {myQueue.map((task) => (
-                    <div key={task.id} className="rounded-[24px] border border-white/[0.08] bg-white/[0.04] px-4 py-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white/86">{task.title}</p>
-                          <p className="mt-1 text-xs text-white/36">{task.project.title}</p>
-                        </div>
-                        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${task.priority === "HIGH" ? "border-red-500/20 bg-red-500/10 text-red-300" : task.priority === "MEDIUM" ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-sky-500/20 bg-sky-500/10 text-sky-300"}`}>
-                          {task.priority.toLowerCase()}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-white/36">
-                        <span>{task.status === "IN_PROGRESS" ? "In progress" : "Queued up"}</span>
-                        <span className="flex items-center gap-3">
-                          {task.dueDate ? formatRelativeDueDate(task.dueDate) : "No due date"}
-                          <Link
-                            href={`/projects/${task.projectId}`}
-                            className="font-semibold text-indigo-600 hover:text-indigo-800"
-                          >
-                            Open project
-                          </Link>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 rounded-[28px] border border-dashed border-white/[0.1] bg-white/[0.03] px-5 py-12 text-center text-sm text-white/30">
-                  Nothing assigned to you right now. Fresh work will land here automatically.
-                </div>
-              )}
-            </section>
-          </div>
         </div>
 
         <section id="activity" className="panel-card rounded-[34px] p-6">

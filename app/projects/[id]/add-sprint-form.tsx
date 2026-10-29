@@ -109,6 +109,7 @@ export default function AddSprintForm({ projectId }: AddSprintFormProps) {
         type="submit"
         disabled={isPending}
         aria-busy={isPending}
+        style={{ color: "#ffffff" }}
       >
         {isPending ? "Creating sprint..." : "Create sprint"}
       </button>

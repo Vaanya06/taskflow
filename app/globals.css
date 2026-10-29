@@ -296,13 +296,20 @@ button[aria-busy="true"]:not(.has-loading-indicator)::after {
 }
 
 .workspace-theme [class*="text-white/"] {
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .workspace-theme [class*="text-white/9"],
 .workspace-theme [class*="text-white/8"],
 .workspace-theme [class~="text-white"] {
-  color: #1e293b;
+  color: #ffffff;
+}
+
+.workspace-theme button[class*="text-white"],
+.workspace-theme button[class*="text-white/"],
+.workspace-theme .accent-button,
+.workspace-theme .primary-button {
+  color: #ffffff !important;
 }
 
 .workspace-theme [class*="border-white"] {
