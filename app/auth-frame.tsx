@@ -47,7 +47,7 @@ export function AuthFrame({
                 </svg>
               </span>
               <div>
-                <p className="text-sm font-semibold text-white">Taskflow</p>
+                <p className="text-sm font-semibold text-white">ILAMED</p>
                 <p className="text-[10px] uppercase tracking-[0.24em] text-white/34">
                   Flow OS
                 </p>
@@ -58,7 +58,7 @@ export function AuthFrame({
               Step back into the board with more signal and less clutter.
             </h2>
             <p className="mt-5 max-w-lg text-sm leading-7 text-white/50">
-              Taskflow keeps planning, task flow, sprint focus, and team updates on one vivid surface so work feels easier to scan at a glance.
+              ILAMED keeps planning, task flow, sprint focus, and team updates on one vivid surface so work feels easier to scan at a glance.
             </p>
           </div>
 

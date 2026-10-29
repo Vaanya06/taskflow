@@ -1,4 +1,4 @@
-ï»¿import Link from "next/link";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 type AuthFrameProps = {
@@ -30,7 +30,7 @@ export function AuthFrame({
                   <rect x="8" y="8" width="5" height="5" rx="1.5" fill="white" opacity="0.3" />
                 </svg>
               </span>
-              Taskflow
+              ILAMED
             </Link>
             <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/30">
               Workspace access
@@ -55,11 +55,11 @@ export function AuthFrame({
             <div className="mt-4 grid gap-3">
               <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
                 <p className="text-sm font-medium text-white/80">Website relaunch</p>
-                <p className="mt-1 text-xs text-white/30">3 active tasks Â· 1 comment pending</p>
+                <p className="mt-1 text-xs text-white/30">3 active tasks · 1 comment pending</p>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
                 <p className="text-sm font-medium text-white/80">Release planning</p>
-                <p className="mt-1 text-xs text-white/30">Due this week Â· 5 contributors</p>
+                <p className="mt-1 text-xs text-white/30">Due this week · 5 contributors</p>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
                 <p className="text-sm font-medium text-white/80">Activity feed</p>

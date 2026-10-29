@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 export type ShellNavItem = {
@@ -108,7 +108,7 @@ export function AppShell({
             </svg>
           </div>
           <Link href="/" className="text-sm font-semibold text-white">
-            Taskflow
+            ILAMED
           </Link>
         </div>
 

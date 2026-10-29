@@ -60,6 +60,55 @@ textarea {
     transform 180ms ease;
 }
 
+button:not(:disabled),
+a[href],
+[role="button"],
+[role="link"],
+[class*="cursor-pointer"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled):active,
+a[href]:active,
+[role="button"]:active,
+[role="link"]:active,
+[class*="cursor-pointer"]:active {
+  transform: scale(0.98);
+}
+
+button:focus-visible,
+a[href]:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+[class*="cursor-pointer"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
+  outline-offset: 3px;
+}
+
+button[aria-busy="true"] {
+  cursor: wait;
+}
+
+button[aria-busy="true"]::after {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-left: 0.55em;
+  flex: 0 0 auto;
+  vertical-align: -0.12em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: control-spinner 700ms linear infinite;
+}
+
+@keyframes control-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes float-gentle {
   0%,
   100% {
@@ -373,4 +422,15 @@ textarea {
 
 .pulse-soft {
   animation: pulse-soft 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

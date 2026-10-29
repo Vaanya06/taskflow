@@ -281,15 +281,16 @@ export default async function ProjectPage({ params }: PageProps) {
         role: membership.role,
       });
     }
-    for (const membership of project.team?.memberships ?? []) {
-      if (!teamMemberMap.has(membership.user.id)) {
-        teamMemberMap.set(membership.user.id, {
-          id: membership.user.id,
-          name: membership.user.name,
-          email: membership.user.email,
-          role: "MEMBER",
-        });
-      }
+  }
+
+  for (const membership of project.team?.memberships ?? []) {
+    if (!teamMemberMap.has(membership.user.id)) {
+      teamMemberMap.set(membership.user.id, {
+        id: membership.user.id,
+        name: membership.user.name,
+        email: membership.user.email,
+        role: "MEMBER",
+      });
     }
   }
 

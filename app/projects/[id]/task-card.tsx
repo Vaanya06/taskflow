@@ -475,7 +475,7 @@ export default function TaskCard({
         </div>
         {error ? <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p> : null}
         <div className="flex flex-wrap gap-2">
-          <button className="accent-button flex h-10 items-center px-5 text-xs font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="submit" disabled={isPending}>
+          <button className="accent-button flex h-10 items-center px-5 text-xs font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="submit" disabled={isPending} aria-busy={isPending}>
             {isPending ? "Saving..." : "Save changes"}
           </button>
           <button className="secondary-button flex h-10 items-center px-5 text-xs font-semibold uppercase tracking-[0.16em]" type="button" onClick={() => { setIsEditing(false); setError(null); setTitle(task.title); setDescription(task.description ?? ""); setIssueType(task.issueType); setStatus(task.status); setPriority(task.priority); setStoryPoints(task.storyPoints?.toString() ?? ""); setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : ""); setAssigneeId(task.assignee?.id ?? ""); setSprintId(task.sprint?.id ?? ""); }}>
@@ -503,26 +503,26 @@ export default function TaskCard({
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <button className="accent-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="button" onClick={handleAdvance} disabled={isPending || (!canManageTasks && task.assignee?.id !== currentUserId)}>
+          <button className="accent-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="button" onClick={handleAdvance} disabled={isPending || (!canManageTasks && task.assignee?.id !== currentUserId)} aria-busy={isPending}>
             {nextStatus.label}
           </button>
           {canAssignToSelf && task.assignee?.id !== currentUserId ? (
-            <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={handleAssignToMe} disabled={isPending}>
+            <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={handleAssignToMe} disabled={isPending} aria-busy={isPending}>
               Assign to me
             </button>
           ) : null}
           {canManageTasks && task.assignee?.id === currentUserId ? (
-            <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={handleUnassign} disabled={isPending}>
+            <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={handleUnassign} disabled={isPending} aria-busy={isPending}>
               Release
             </button>
           ) : null}
           {canManageTasks ? (
-            <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={() => setIsEditing(true)} disabled={isPending}>
+            <button className="secondary-button flex h-9 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="button" onClick={() => setIsEditing(true)} disabled={isPending} aria-busy={isPending}>
               Edit
             </button>
           ) : null}
           {canDelete ? (
-            <button className="flex h-9 items-center rounded-full border border-red-500/20 bg-red-500/5 px-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-300 transition hover:bg-red-500/10 disabled:opacity-50" type="button" onClick={handleDelete} disabled={isPending}>
+            <button className="flex h-9 items-center rounded-full border border-red-500/20 bg-red-500/5 px-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-300 transition hover:bg-red-500/10 disabled:opacity-50" type="button" onClick={handleDelete} disabled={isPending} aria-busy={isPending}>
               Delete
             </button>
           ) : null}
@@ -584,7 +584,7 @@ export default function TaskCard({
         {canManageTasks ? <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={handleCreateLabel}>
           <input className="soft-input h-10 min-w-[180px] flex-1 rounded-2xl px-4 text-sm" placeholder="Create label" value={labelName} onChange={(event) => setLabelName(event.target.value)} />
           <input className="h-10 w-12 rounded-2xl border border-white/10 bg-white/5" type="color" value={labelColor} onChange={(event) => setLabelColor(event.target.value)} aria-label="Label color" />
-          <button className="secondary-button flex h-10 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="submit" disabled={isPending}>
+          <button className="secondary-button flex h-10 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em]" type="submit" disabled={isPending} aria-busy={isPending}>
             Add label
           </button>
         </form> : null}
@@ -608,7 +608,7 @@ export default function TaskCard({
           <textarea className="soft-input min-h-[90px] rounded-[22px] px-4 py-3 text-sm" placeholder="Write a comment" value={commentBody} onChange={(event) => setCommentBody(event.target.value)} />
           <div className="flex items-center justify-between gap-2">
             {commentError ? <span className="text-xs text-red-300">{commentError}</span> : <span className="text-xs text-white/30">Keep it short, clear, and actionable.</span>}
-            <button className="accent-button flex h-10 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="submit" disabled={isPending}>
+            <button className="accent-button flex h-10 items-center px-4 text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60" type="submit" disabled={isPending} aria-busy={isPending}>
               Add comment
             </button>
           </div>

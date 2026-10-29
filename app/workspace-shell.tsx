@@ -114,7 +114,7 @@ export function WorkspaceShell({
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">Taskflow</p>
+              <p className="text-sm font-semibold text-white">ILAMED</p>
               <p className="text-[10px] uppercase tracking-[0.24em] text-white/35">
                 Flow OS
               </p>

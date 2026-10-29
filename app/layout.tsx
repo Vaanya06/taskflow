@@ -3,11 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Taskflow",
-    template: "%s | Taskflow",
+    default: "ILAMED",
+    template: "%s | ILAMED",
   },
   description:
-    "Taskflow helps you plan your day, organize personal tasks, build routines, and collaborate on team projects.",
+    "ILAMED helps you plan your day, organize personal tasks, build routines, and collaborate on team projects.",
 };
 
 export default function RootLayout({

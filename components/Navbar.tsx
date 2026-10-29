@@ -1,7 +1,7 @@
 export function Navbar() {
   return (
     <nav>
-      <span>Taskflow</span>
+      <span>ILAMED</span>
     </nav>
   );
 }

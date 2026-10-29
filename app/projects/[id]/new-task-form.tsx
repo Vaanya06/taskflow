@@ -161,7 +161,7 @@ export default function NewTaskForm({
   };
 
   return (
-    <form className="panel-card rounded-[32px] p-6" onSubmit={handleSubmit}>
+    <form id="task-composer" className="panel-card rounded-[32px] p-6" onSubmit={handleSubmit}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">Quick issue composer</p>
@@ -182,6 +182,7 @@ export default function NewTaskForm({
             type={isOpen ? "submit" : "button"}
             onClick={!isOpen ? () => setIsOpen(true) : undefined}
             disabled={isPending}
+            aria-busy={isPending && isOpen}
             className="accent-button flex h-10 items-center px-5 text-xs font-semibold uppercase tracking-[0.16em] disabled:opacity-60"
           >
             {isOpen ? (isPending ? "Creating..." : "Create issue") : "Open composer"}

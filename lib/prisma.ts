@@ -4,9 +4,14 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const connectionString = process.env.DATABASE_URL;
 const RETRYABLE_CONNECTION_ERROR_CODES = new Set(["P1001", "P1017"]);
 const connectionTimeoutMillis = Number(process.env.PG_CONNECTION_TIMEOUT_MS || 15000);
+const maxPoolConnections = Number(process.env.PG_POOL_MAX || 1);
 
 if (!connectionString) {
   throw new Error("DATABASE_URL is not set.");
+}
+
+if (!Number.isInteger(maxPoolConnections) || maxPoolConnections < 1 || maxPoolConnections > 15) {
+  throw new Error("PG_POOL_MAX must be an integer between 1 and 15.");
 }
 
 function isRetryableConnectionError(error: unknown) {
@@ -27,7 +32,7 @@ function createPrismaClient() {
       connectionTimeoutMillis,
       idleTimeoutMillis: 30000,
       keepAlive: true,
-      max: 5,
+      max: maxPoolConnections,
     },
     {
       onConnectionError(error) {
@@ -63,15 +68,15 @@ function createPrismaClient() {
 type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>;
 
 declare global {
-  var taskflowPrisma: ExtendedPrismaClient | undefined;
+  var ilamedPrisma: ExtendedPrismaClient | undefined;
 }
 
 const globalForPrisma = globalThis as typeof globalThis & {
-  taskflowPrisma?: ExtendedPrismaClient;
+  ilamedPrisma?: ExtendedPrismaClient;
 };
 
-export const prisma = globalForPrisma.taskflowPrisma ?? createPrismaClient();
+export const prisma = globalForPrisma.ilamedPrisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.taskflowPrisma = prisma;
+  globalForPrisma.ilamedPrisma = prisma;
 }

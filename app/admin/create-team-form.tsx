@@ -38,7 +38,7 @@ export default function CreateTeamForm() {
         Manager account
         <input required type="email" value={managerEmail} onChange={(event) => setManagerEmail(event.target.value)} className="soft-input h-10 rounded-lg px-3 text-sm" placeholder="manager@company.com" />
       </label>
-      <button disabled={pending} className="accent-button self-end px-4 py-2.5 text-xs font-semibold disabled:opacity-50">
+      <button aria-busy={pending} disabled={pending} className="accent-button self-end px-4 py-2.5 text-xs font-semibold disabled:opacity-50">
         {pending ? "Creating…" : "Create team"}
       </button>
       {error ? <p role="alert" className="text-xs text-rose-600 sm:col-span-3">{error}</p> : null}

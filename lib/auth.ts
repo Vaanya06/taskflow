@@ -11,7 +11,7 @@ export type AuthUser = {
   role: UserRole;
 };
 
-export const SESSION_COOKIE = "taskflow_session";
+export const SESSION_COOKIE = "ilamed_session";
 const SESSION_TTL_DAYS = 7;
 
 function hashToken(token: string): string {

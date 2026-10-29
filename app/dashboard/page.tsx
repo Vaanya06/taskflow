@@ -178,6 +178,14 @@ export default async function DashboardPage() {
             userId: true,
           },
         },
+        team: {
+          select: {
+            memberships: {
+              where: { userId: user.id, role: "MANAGER" },
+              select: { userId: true },
+            },
+          },
+        },
       },
     }),
     prisma.activity.findMany({
@@ -321,6 +329,7 @@ export default async function DashboardPage() {
       const progress = getCompletion(totalProjectTasks, doneProjectTasks);
       const memberCount = new Set([project.ownerId, ...project.members.map((member) => member.userId)]).size;
       const isOwner = project.ownerId === user.id;
+      const isManagedTeamProject = Boolean(project.team?.memberships.length);
 
       return {
         ...project,
@@ -332,6 +341,7 @@ export default async function DashboardPage() {
         progress,
         memberCount,
         isOwner,
+        isManagedTeamProject,
         mood: getProjectMood(overdueProjectTasks, dueSoonProjectTasks, activeProjectTasks),
       };
     })
@@ -419,6 +429,33 @@ export default async function DashboardPage() {
             </div>
           </div>
         </section>
+
+        {user.role === "MANAGER" ? (
+          <section className="panel-card rounded-[30px] p-5 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="section-kicker">Team manager</p>
+                <h2 className="mt-2 text-xl font-semibold text-white/90">Create team task</h2>
+                <p className="mt-1 text-sm text-white/42">Choose one of your team&apos;s connected projects to create and assign work.</p>
+              </div>
+              {projectSnapshots.some((project) => project.isManagedTeamProject) ? (
+                <div className="flex flex-wrap gap-2">
+                  {projectSnapshots.filter((project) => project.isManagedTeamProject).map((project) => (
+                    <Link
+                      key={project.id}
+                      href={`/projects/${project.id}#task-composer`}
+                      className="accent-button flex h-10 items-center px-4 text-xs font-semibold uppercase tracking-[0.16em]"
+                    >
+                      {project.title}
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-white/38">No projects are connected to your team yet.</p>
+              )}
+            </div>
+          </section>
+        ) : null}
 
         {user.role === "MANAGER" ? <TeamManagement /> : null}
 

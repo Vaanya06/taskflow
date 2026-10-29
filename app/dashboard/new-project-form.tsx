@@ -140,6 +140,7 @@ export default function NewProjectForm() {
               <button
                 type="submit"
                 disabled={isPending}
+                aria-busy={isPending}
                 className="accent-button flex h-10 items-center px-5 text-xs font-semibold uppercase tracking-[0.16em] disabled:opacity-50"
               >
                 {isPending ? "Creating..." : "Create workspace"}

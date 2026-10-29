@@ -65,7 +65,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     select: { id: true, name: true, email: true },
   });
   if (!invitee) {
-    return NextResponse.json({ ok: false, error: "No Taskflow account uses that email." }, { status: 404 });
+    return NextResponse.json({ ok: false, error: "No ILAMED account uses that email." }, { status: 404 });
   }
   if (invitee.id === user.id) {
     return NextResponse.json({ ok: false, error: "You already own this list." }, { status: 400 });

@@ -108,6 +108,7 @@ export default function AddSprintForm({ projectId }: AddSprintFormProps) {
         className="flex h-10 items-center justify-center rounded-lg bg-indigo-500 px-4 text-sm font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-70"
         type="submit"
         disabled={isPending}
+        aria-busy={isPending}
       >
         {isPending ? "Creating sprint..." : "Create sprint"}
       </button>

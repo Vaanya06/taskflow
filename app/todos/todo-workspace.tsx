@@ -231,7 +231,7 @@ export default function TodoWorkspace({
             notifiedReminders.current.add(task.id);
             new Notification(task.title, {
               body: task.note || `Reminder from ${task.list.name}`,
-              tag: `taskflow-${task.id}`,
+              tag: `ilamed-${task.id}`,
             });
           }
         }
@@ -471,7 +471,7 @@ export default function TodoWorkspace({
               <Icon name="check" />
             </span>
             <span>
-              <span className="block text-sm font-bold tracking-tight">Taskflow</span>
+              <span className="block text-sm font-bold tracking-tight">ILAMED</span>
               <span className="block text-xs text-slate-500">A little more focus.</span>
             </span>
           </Link>
@@ -568,7 +568,7 @@ export default function TodoWorkspace({
                 const permission = await Notification.requestPermission();
                 setRemindersEnabled(permission === "granted");
                 if (permission !== "granted") {
-                  setError("Allow notifications in your browser to receive reminders while Taskflow is open.");
+                  setError("Allow notifications in your browser to receive reminders while ILAMED is open.");
                 } else {
                   setError(null);
                 }
@@ -726,7 +726,7 @@ export default function TodoWorkspace({
                         <input name="dueDate" type="date" defaultValue={toDateInput(activeTask.dueDate)} className="todo-input w-full" />
                       </label>
                       <label className="grid gap-1.5 text-xs font-semibold text-slate-500">
-                        Reminder (while Taskflow is open)
+                        Reminder (while ILAMED is open)
                         <input name="reminderAt" type="datetime-local" defaultValue={toDateTimeInput(activeTask.reminderAt)} className="todo-input w-full" />
                       </label>
                       <label className="grid gap-1.5 text-xs font-semibold text-slate-500">

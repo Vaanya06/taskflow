@@ -47,6 +47,7 @@ export default function UserRoleControl({
           Role
           <select
             aria-label={`Role for ${userId}`}
+            aria-busy={isPending}
             className="soft-input h-10 rounded-xl px-3 text-sm"
             value={role}
             disabled={isPending}

@@ -12,7 +12,7 @@ const features = [
   },
   {
     title: "Lists that work together",
-    description: "Keep personal lists private or share one with another Taskflow user. Your project workspaces stay separate.",
+    description: "Keep personal lists private or share one with another ILAMED user. Your project workspaces stay separate.",
   },
 ];
 
@@ -39,12 +39,12 @@ const workflowSteps = [
 
 const faqItems = [
   {
-    question: "What is Taskflow for?",
-    answer: "Taskflow helps you organize everyday tasks with a focused day view, flexible lists, reminders, and recurring routines.",
+    question: "What is ILAMED for?",
+    answer: "ILAMED helps you organize everyday tasks with a focused day view, flexible lists, reminders, and recurring routines.",
   },
   {
     question: "Can I share a list?",
-    answer: "Yes. List owners can share lists with other Taskflow accounts and remove access when it is no longer needed.",
+    answer: "Yes. List owners can share lists with other ILAMED accounts and remove access when it is no longer needed.",
   },
   {
     question: "What happens to project workspaces?",
@@ -77,7 +77,7 @@ export default async function Home() {
               </svg>
             </span>
             <div>
-              <p className="text-sm font-semibold text-white">Taskflow</p>
+              <p className="text-sm font-semibold text-white">ILAMED</p>
               <p className="text-[10px] uppercase tracking-[0.24em] text-white/34">Flow OS</p>
             </div>
           </Link>

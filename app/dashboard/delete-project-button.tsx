@@ -46,6 +46,7 @@ export default function DeleteProjectButton({
         type="button"
         onClick={handleDelete}
         disabled={isPending}
+        aria-busy={isPending}
         className="flex h-7 items-center rounded-lg border border-red-500/20 bg-red-500/5 px-3 text-xs font-medium text-red-400/60 transition hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
       >
         {isPending ? "..." : "Delete"}

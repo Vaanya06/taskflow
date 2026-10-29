@@ -79,7 +79,7 @@ export default async function AdminPage() {
             Your team, at a glance.
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-8 text-white/48">
-            Review account roles and see every project across Taskflow. Project work and destructive project actions remain with project owners.
+            Review account roles and see every project across ILAMED. Project work and destructive project actions remain with project owners.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-5">
             {[
