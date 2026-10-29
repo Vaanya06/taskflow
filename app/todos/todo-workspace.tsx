@@ -467,12 +467,8 @@ export default function TodoWorkspace({
     <main className="todo-app min-h-screen text-slate-800">
       <div className="flex min-h-screen flex-col lg:flex-row">
         <aside className="todo-sidebar flex w-full shrink-0 flex-col px-4 py-5 lg:min-h-screen lg:w-[272px] lg:px-5">
-          <Link href="/" className="flex items-center gap-3 px-2">
-            <Image src="/ilamed-logo.png" alt="ILAMED logo" width={40} height={40} className="h-10 w-10 object-contain" />
-            <span>
-              <span className="block text-sm font-bold tracking-tight">ILAMED</span>
-              <span className="block text-xs text-slate-500">A little more focus.</span>
-            </span>
+          <Link href="/" className="block w-fit max-w-full rounded bg-white">
+            <Image src="/ilamed-logo.png" alt="ILAMED — Institute of Laser & Aesthetic Medicine" width={2327} height={768} className="h-auto w-full max-w-[232px] object-contain" priority />
           </Link>
 
           <div className="mt-7 flex items-center gap-3 rounded-2xl bg-white/70 p-3">

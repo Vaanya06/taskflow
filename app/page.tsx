@@ -68,12 +68,8 @@ export default async function Home() {
     <main className="home-theme">
       <header className="home-header sticky top-0 z-20 border-b backdrop-blur">
         <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-6 py-4">
-          <Link href="/" className="flex items-center gap-3 text-sm font-semibold text-white">
-            <Image src="/ilamed-logo.png" alt="ILAMED logo" width={40} height={40} className="h-10 w-10 object-contain" />
-            <div>
-              <p className="text-sm font-semibold text-white">ILAMED</p>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-white/34">Flow OS</p>
-            </div>
+          <Link href="/" className="block w-fit rounded bg-white">
+            <Image src="/ilamed-logo.png" alt="ILAMED — Institute of Laser & Aesthetic Medicine" width={2327} height={768} className="h-auto w-[min(30vw,300px)] min-w-[180px] object-contain" priority />
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-white/48 md:flex">

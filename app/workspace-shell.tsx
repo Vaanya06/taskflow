@@ -105,21 +105,10 @@ export function WorkspaceShell({
       <aside className="workspace-sidebar relative flex w-full shrink-0 flex-col overflow-hidden border-b lg:w-[250px] lg:border-b-0 lg:border-r">
         <div className="pointer-events-none absolute inset-0 surface-grid opacity-[0.12]" />
 
-        <div className="relative flex h-16 items-center justify-between border-b border-white/[0.08] px-4">
-          <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold text-white">
-            <Image src="/ilamed-logo.png" alt="ILAMED logo" width={40} height={40} className="h-10 w-10 object-contain" />
-            <div>
-              <p className="text-sm font-semibold text-white">ILAMED</p>
-              <p className="text-[10px] uppercase tracking-[0.24em] text-white/35">
-                Flow OS
-              </p>
-            </div>
+        <div className="relative flex min-h-20 items-center border-b border-white/[0.08] px-3">
+          <Link href="/" className="block rounded bg-white">
+            <Image src="/ilamed-logo.png" alt="ILAMED — Institute of Laser & Aesthetic Medicine" width={2327} height={768} className="h-auto w-[214px] object-contain" priority />
           </Link>
-
-          <span className="badge-pill hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 sm:inline-flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-soft" />
-            Live
-          </span>
         </div>
 
         <div className="relative px-3 pt-4">

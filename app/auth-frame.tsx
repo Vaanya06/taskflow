@@ -38,14 +38,8 @@ export function AuthFrame({
         <section className="panel-card hidden rounded-none border-0 border-r border-white/[0.08] p-8 lg:flex lg:flex-col">
           <div className="surface-grid absolute inset-0 opacity-[0.08]" />
           <div>
-            <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold text-white">
-              <Image src="/ilamed-logo.png" alt="ILAMED logo" width={40} height={40} className="h-10 w-10 object-contain" />
-              <div>
-                <p className="text-sm font-semibold text-white">ILAMED</p>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-white/34">
-                  Flow OS
-                </p>
-              </div>
+            <Link href="/" className="block w-fit rounded bg-white">
+              <Image src="/ilamed-logo.png" alt="ILAMED — Institute of Laser & Aesthetic Medicine" width={2327} height={768} className="h-auto w-[min(100%,360px)] object-contain" priority />
             </Link>
             <p className="section-kicker mt-12">Workspace access</p>
             <h2 className="display-font mt-5 max-w-xl text-5xl leading-[1.05] text-white/94">
