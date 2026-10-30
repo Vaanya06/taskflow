@@ -6,6 +6,7 @@ import { COMPANY_TASK_PROJECT_ID } from "@/services/company-tasks";
 import LogoutButton from "@/app/dashboard/logout-button";
 import EmployeePresence from "./employee-presence";
 import CompanyTaskBoard from "@/app/company-tasks/company-task-board";
+import { CompanyContext } from "@/app/company-tasks/company-context";
 
 export default async function AdminPage() {
   const currentUser = await getCurrentUser();
@@ -61,6 +62,7 @@ export default async function AdminPage() {
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/50">
             Assign each task to an employee, set an optional due date, and follow its status from one list.
           </p>
+          <CompanyContext />
         </section>
 
         <CompanyTaskBoard

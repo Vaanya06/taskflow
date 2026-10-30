@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { COMPANY_TASK_PROJECT_ID } from "@/services/company-tasks";
 import CompanyTaskBoard from "./company-task-board";
+import { CompanyContext } from "./company-context";
 
 export default async function CompanyTasksPage() {
   const user = await getCurrentUser();
@@ -41,6 +42,10 @@ export default async function CompanyTasksPage() {
       userAction={<LogoutButton />}
     >
       <div className="mx-auto w-full max-w-6xl">
+        <section className="panel-card mb-5 rounded-3xl p-5 sm:p-6">
+          <p className="section-kicker">About ILAMED</p>
+          <CompanyContext />
+        </section>
         <CompanyTaskBoard
           isAdmin={false}
           employees={[]}

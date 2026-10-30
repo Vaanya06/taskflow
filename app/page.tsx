@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
+import { CompanyContext } from "@/app/company-tasks/company-context";
 
 const features = [
   {
@@ -183,6 +184,16 @@ export default async function Home() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="px-6 pb-16 sm:pb-20">
+        <div className="panel-card mx-auto max-w-6xl rounded-[32px] p-6 sm:p-8">
+          <p className="section-kicker">About ILAMED</p>
+          <h2 className="display-font mt-3 text-3xl text-white/92">
+            Supporting education in aesthetic medicine.
+          </h2>
+          <CompanyContext />
         </div>
       </section>
 

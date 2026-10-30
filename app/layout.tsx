@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: "%s | ILAMED",
   },
   description:
-    "ILAMED helps you plan your day, organize personal tasks, build routines, and collaborate on team projects.",
+    "The ILAMED employee workspace for assigned tasks, due dates, checklists, and progress tracking.",
 };
 
 export default function RootLayout({
