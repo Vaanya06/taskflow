@@ -23,6 +23,10 @@ export default async function CompanyTasksPage() {
       createdAt: true,
       updatedAt: true,
       assignee: { select: { id: true, name: true, email: true } },
+      checklistItems: {
+        orderBy: { position: "asc" },
+        select: { id: true, title: true, isCompleted: true, position: true },
+      },
     },
     orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
   });

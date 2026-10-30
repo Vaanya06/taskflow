@@ -5,6 +5,7 @@ import { Fragment, useMemo, useState } from "react";
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
 type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
 type Employee = { id: string; name: string | null; email: string };
+type ChecklistItem = { id: string; title: string; isCompleted: boolean; position: number };
 type TaskComment = { id: string; content: string; createdAt: string; author: string; authorId: string };
 type CompanyTask = {
   id: string;
@@ -16,6 +17,7 @@ type CompanyTask = {
   createdAt: string;
   updatedAt: string;
   assignee: Employee | null;
+  checklistItems: ChecklistItem[];
 };
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -23,11 +25,34 @@ const statusLabels: Record<TaskStatus, string> = {
   IN_PROGRESS: "In progress",
   DONE: "Completed",
 };
+const statusProgress: Record<TaskStatus, number> = {
+  TODO: 0,
+  IN_PROGRESS: 50,
+  DONE: 100,
+};
 const priorityLabels: Record<TaskPriority, string> = {
   LOW: "Low",
   MEDIUM: "Normal",
   HIGH: "High",
 };
+
+function getTaskProgress(task: CompanyTask) {
+  if (!task.checklistItems.length) {
+    return {
+      percentage: statusProgress[task.status],
+      valueText: statusLabels[task.status],
+      countText: null,
+    };
+  }
+
+  const completed = task.checklistItems.filter((item) => item.isCompleted).length;
+  const percentage = Math.round((completed / task.checklistItems.length) * 100);
+  return {
+    percentage,
+    valueText: `${completed} of ${task.checklistItems.length} steps complete`,
+    countText: `${completed}/${task.checklistItems.length} steps`,
+  };
+}
 
 function employeeLabel(employee: Employee | null) {
   return employee ? employee.name || employee.email : "Unassigned";
@@ -56,6 +81,7 @@ export default function CompanyTaskBoard({
   const [dueFilter, setDueFilter] = useState("ALL");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [checklistText, setChecklistText] = useState("");
   const [assigneeId, setAssigneeId] = useState(employees[0]?.id ?? "");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
@@ -95,11 +121,12 @@ export default function CompanyTaskBoard({
     setSavingTask(true);
     setError(null);
     setNotice(null);
+    const checklistItems = checklistText.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
     try {
       const response = await fetch("/api/company-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, assigneeId, dueDate: dueDate || null, priority }),
+        body: JSON.stringify({ title, description, assigneeId, dueDate: dueDate || null, priority, checklistItems }),
       });
       const data = await response.json() as { ok?: boolean; task?: CompanyTask; error?: string };
       if (!response.ok || !data.ok || !data.task) {
@@ -109,6 +136,7 @@ export default function CompanyTaskBoard({
       setTasks((current) => [data.task!, ...current]);
       setTitle("");
       setDescription("");
+      setChecklistText("");
       setDueDate("");
       setPriority("MEDIUM");
       setNotice("Task assigned.");
@@ -241,6 +269,38 @@ export default function CompanyTaskBoard({
     }
   }
 
+  async function updateChecklistItem(task: CompanyTask, item: ChecklistItem, isCompleted: boolean) {
+    setPendingId(task.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/company-tasks/${task.id}/checklist/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isCompleted }),
+      });
+      const data = await response.json() as { ok?: boolean; item?: ChecklistItem; error?: string };
+      if (!response.ok || !data.ok || !data.item) {
+        setError(data.error || "Unable to update checklist progress.");
+        return;
+      }
+
+      setTasks((current) => current.map((currentTask) => (
+        currentTask.id === task.id
+          ? {
+              ...currentTask,
+              checklistItems: currentTask.checklistItems.map((checklistItem) => (
+                checklistItem.id === data.item!.id ? data.item! : checklistItem
+              )),
+            }
+          : currentTask
+      )));
+    } catch {
+      setError("Unable to update checklist progress. Check your connection and try again.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {isAdmin ? (
@@ -284,6 +344,21 @@ export default function CompanyTaskBoard({
                   rows={2}
                   className="soft-input rounded-xl px-3 py-2 text-sm"
                 />
+              </label>
+              <label className="grid gap-1.5 text-xs font-medium text-white/55 sm:col-span-2">
+                Checklist (optional, one step per line)
+                <textarea
+                  maxLength={4200}
+                  value={checklistText}
+                  onChange={(event) => setChecklistText(event.target.value)}
+                  placeholder={"Prepare the materials\nComplete the work\nReview and submit"}
+                  rows={3}
+                  className="soft-input rounded-xl px-3 py-2 text-sm"
+                  aria-describedby="task-checklist-help"
+                />
+                <span id="task-checklist-help" className="text-[11px] font-normal text-white/35">
+                  Up to 20 steps. Employees check them off as they complete the task.
+                </span>
               </label>
               <label className="grid gap-1.5 text-xs font-medium text-white/55">
                 Assign to
@@ -397,12 +472,38 @@ export default function CompanyTaskBoard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.06]">
-                {visibleTasks.map((task) => (
+                {visibleTasks.map((task) => {
+                  const progress = getTaskProgress(task);
+                  return (
                   <Fragment key={task.id}>
                     <tr>
                       <td className="max-w-[30rem] px-5 py-4">
                         <p className="text-sm font-medium text-white/85">{task.title}</p>
                         {task.description ? <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-white/40">{task.description}</p> : null}
+                        {task.checklistItems.length ? (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-[11px] font-medium text-white/45">
+                              Checklist · {task.checklistItems.filter((item) => item.isCompleted).length}/{task.checklistItems.length}
+                            </p>
+                            <ul className="space-y-1.5">
+                              {task.checklistItems.map((item) => (
+                                <li key={item.id} className="flex items-start gap-2 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={item.isCompleted}
+                                    disabled={isAdmin || pendingId === task.id}
+                                    onChange={(event) => void updateChecklistItem(task, item, event.target.checked)}
+                                    aria-label={`${item.isCompleted ? "Mark incomplete" : "Mark complete"}: ${item.title}`}
+                                    className="mt-0.5 accent-indigo-400 disabled:cursor-not-allowed"
+                                  />
+                                  <span className={item.isCompleted ? "text-white/35 line-through" : "text-white/65"}>
+                                    {item.title}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
                         <button type="button" onClick={() => void toggleComments(task.id)} className="mt-2 text-xs font-medium text-indigo-300 hover:text-indigo-200">
                           {expandedTaskId === task.id ? "Hide updates" : "Progress updates"}
                           {comments[task.id] ? ` (${comments[task.id].length})` : ""}
@@ -466,6 +567,31 @@ export default function CompanyTaskBoard({
                             <option key={status} value={status}>{statusLabels[status]}</option>
                           ))}
                         </select>
+                        <div
+                          className="mt-2 flex items-center gap-2"
+                          role="progressbar"
+                          aria-label={`Progress for ${task.title}`}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={progress.percentage}
+                          aria-valuetext={progress.valueText}
+                        >
+                          <div className="h-1.5 min-w-16 flex-1 overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className={`h-full rounded-full transition-[width] duration-300 ${
+                                progress.percentage === 100
+                                  ? "bg-emerald-400"
+                                  : progress.percentage > 0
+                                    ? "bg-indigo-400"
+                                    : "bg-white/25"
+                              }`}
+                              style={{ width: `${progress.percentage}%` }}
+                            />
+                          </div>
+                          <span className="whitespace-nowrap text-right text-[10px] tabular-nums text-white/40">
+                            {progress.countText ? `${progress.countText} · ` : ""}{progress.percentage}%
+                          </span>
+                        </div>
                       </td>
                     </tr>
                     {expandedTaskId === task.id ? (
@@ -508,7 +634,8 @@ export default function CompanyTaskBoard({
                       </tr>
                     ) : null}
                   </Fragment>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

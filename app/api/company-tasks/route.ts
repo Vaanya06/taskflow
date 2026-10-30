@@ -14,6 +14,10 @@ const taskSelect = {
   createdAt: true,
   updatedAt: true,
   assignee: { select: { id: true, name: true, email: true } },
+  checklistItems: {
+    orderBy: { position: "asc" },
+    select: { id: true, title: true, isCompleted: true, position: true },
+  },
 } as const;
 
 export async function GET() {
@@ -43,7 +47,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Administrator access is required to assign tasks." }, { status: 403 });
   }
 
-  let payload: { title?: unknown; description?: unknown; assigneeId?: unknown; dueDate?: unknown; priority?: unknown } | null;
+  let payload: {
+    title?: unknown;
+    description?: unknown;
+    assigneeId?: unknown;
+    dueDate?: unknown;
+    priority?: unknown;
+    checklistItems?: unknown;
+  } | null;
   try {
     payload = await request.json();
   } catch {
@@ -54,11 +65,19 @@ export async function POST(request: Request) {
   const description = typeof payload?.description === "string" ? payload.description.trim() : "";
   const assigneeId = typeof payload?.assigneeId === "string" ? payload.assigneeId.trim() : "";
   const priority = payload?.priority === undefined ? "MEDIUM" : payload.priority;
+  const checklistItems = payload?.checklistItems === undefined ? [] : payload.checklistItems;
   if (title.length < 2 || title.length > 200) {
     return NextResponse.json({ ok: false, error: "Task title must be between 2 and 200 characters." }, { status: 400 });
   }
   if (description.length > 2000) {
     return NextResponse.json({ ok: false, error: "Task description must be 2000 characters or fewer." }, { status: 400 });
+  }
+  if (
+    !Array.isArray(checklistItems)
+    || checklistItems.length > 20
+    || checklistItems.some((item) => typeof item !== "string" || !item.trim() || item.trim().length > 200)
+  ) {
+    return NextResponse.json({ ok: false, error: "Add up to 20 checklist items, each between 1 and 200 characters." }, { status: 400 });
   }
   if (!assigneeId) {
     return NextResponse.json({ ok: false, error: "Choose an employee to assign this task to." }, { status: 400 });
@@ -98,6 +117,12 @@ export async function POST(request: Request) {
         dueDate,
         projectId: project.id,
         assigneeId: assignee.id,
+        checklistItems: {
+          create: checklistItems.map((item, position) => ({
+            title: item.trim(),
+            position,
+          })),
+        },
       },
       select: taskSelect,
     });

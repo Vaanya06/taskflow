@@ -94,6 +94,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         updatedAt: true,
         assigneeId: true,
         assignee: { select: { id: true, name: true, email: true } },
+        checklistItems: {
+          orderBy: { position: "asc" },
+          select: { id: true, title: true, isCompleted: true, position: true },
+        },
       },
     });
 
