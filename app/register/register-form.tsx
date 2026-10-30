@@ -40,12 +40,6 @@ export default function RegisterForm() {
 
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="badge-pill justify-center text-xs text-white/62">Assigned tasks</div>
-        <div className="badge-pill justify-center text-xs text-white/62">Due dates</div>
-        <div className="badge-pill justify-center text-xs text-white/62">Progress</div>
-      </div>
-
       <label className="grid gap-2 text-sm font-medium text-white/48">
         Name
         <input

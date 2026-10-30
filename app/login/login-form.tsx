@@ -39,15 +39,6 @@ export default function LoginForm() {
 
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="badge-pill justify-center text-xs text-white/62">
-          See your assigned tasks
-        </div>
-        <div className="badge-pill justify-center text-xs text-white/62">
-          Update progress as you work
-        </div>
-      </div>
-
       <label className="grid gap-2 text-sm font-medium text-white/48">
         Email
         <input
@@ -88,9 +79,6 @@ export default function LoginForm() {
         {isPending ? "Signing in..." : "Sign in"}
       </button>
 
-      <p className="text-xs leading-6 text-white/32">
-        Sign in to view the tasks assigned to you and update their progress.
-      </p>
     </form>
   );
 }
