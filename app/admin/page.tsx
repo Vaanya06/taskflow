@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { COMPANY_TASK_PROJECT_ID } from "@/services/company-tasks";
 import LogoutButton from "@/app/dashboard/logout-button";
-import UserRoleControl from "./user-role-control";
+import EmployeePresence from "./employee-presence";
 import CompanyTaskBoard from "@/app/company-tasks/company-task-board";
 
 export default async function AdminPage() {
@@ -16,7 +16,7 @@ export default async function AdminPage() {
     prisma.user.findMany({
       where: { role: { not: "ADMIN" } },
       orderBy: [{ name: "asc" }, { email: "asc" }],
-      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, createdAt: true, lastSeenAt: true },
     }),
     prisma.task.findMany({
       where: { projectId: COMPANY_TASK_PROJECT_ID },
@@ -77,17 +77,13 @@ export default async function AdminPage() {
             <p className="mt-1 text-sm text-white/45">Employee accounts can view their assigned tasks and update progress.</p>
           </div>
           {users.length ? (
-            <div className="divide-y divide-white/[0.08]">
-              {users.map((employee) => (
-                <div key={employee.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <div>
-                    <p className="text-sm font-medium text-white/80">{employee.name || "Unnamed employee"}</p>
-                    <p className="mt-1 text-xs text-white/40">{employee.email}</p>
-                  </div>
-                  <UserRoleControl userId={employee.id} role={employee.role} isCurrentUser={false} />
-                </div>
-              ))}
-            </div>
+            <EmployeePresence
+              employees={users.map((employee) => ({
+                ...employee,
+                createdAt: employee.createdAt.toISOString(),
+                lastSeenAt: employee.lastSeenAt?.toISOString() ?? null,
+              }))}
+            />
           ) : (
             <p className="text-sm text-white/45">No employee accounts yet. Employees can create accounts to receive assigned tasks.</p>
           )}

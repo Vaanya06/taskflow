@@ -28,7 +28,9 @@ npx prisma generate
 npm run dev
 ```
 
-Regular accounts have the `USER` role and land in the company task tracker at `/company-tasks`. Employees see only tasks assigned to them, update status, and add progress notes or blockers. Administrators land in `/admin`, where they assign tasks with optional due dates and priority, filter the company task list, and track progress. Employees receive an in-app notification for new assignments; task updates notify the other side. `/dashboard` forwards to the appropriate task view.
+Regular accounts have the `USER` role and land in the company task tracker at `/company-tasks`. Employees see only tasks assigned to them, update status, and add progress notes or blockers. Administrators land in `/admin`, where they assign and reassign tasks with optional due dates and priority, search tasks, filter by employee, status, priority, or due date, and spot overdue work. Employees receive in-app notifications for assignments and task updates. `/dashboard` forwards to the appropriate task view.
+
+The admin employee list shows live in-app presence. Authenticated workspace pages send a heartbeat every 30 seconds while visible; employees appear online for 90 seconds after their last heartbeat, and the admin list refreshes every 15 seconds. Presence is not device or off-app activity tracking. Apply the `20261030105000_add_user_presence` migration before deploying this feature.
 
 The company task workflow uses a shared internal project record to store assignments; admins and employees work with a single task list rather than project or sprint screens. Existing project and team data is left untouched, but project workspaces are no longer the default company workflow. Personal to-dos remain separate at `/todos` for private or shared lists, My Day, reminders, repeating tasks, and task steps.
 

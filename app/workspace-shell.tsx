@@ -3,6 +3,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { WorkspaceSwitcher } from "@/app/workspace-switcher";
 import NotificationsInbox from "@/app/notifications-inbox";
+import PresenceHeartbeat from "@/app/presence-heartbeat";
 
 export type WorkspaceNavItem = {
   href: string;
@@ -102,6 +103,7 @@ export function WorkspaceShell({
 
   return (
     <div className="workspace-theme flex min-h-screen flex-col overflow-hidden lg:flex-row">
+      <PresenceHeartbeat />
       <aside className="workspace-sidebar relative flex w-full shrink-0 flex-col overflow-hidden border-b lg:w-[250px] lg:border-b-0 lg:border-r">
         <div className="pointer-events-none absolute inset-0 surface-grid opacity-[0.12]" />
 

@@ -13,6 +13,7 @@ model User {
   password          String?
   role              UserRole             @default(USER)
   avatar            String?
+  lastSeenAt        DateTime?
   createdAt         DateTime             @default(now())
   comments          Comment[]
   activities        Activity[]

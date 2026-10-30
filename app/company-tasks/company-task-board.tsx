@@ -49,8 +49,11 @@ export default function CompanyTaskBoard({
   initialTasks: CompanyTask[];
 }) {
   const [tasks, setTasks] = useState(initialTasks);
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [employeeFilter, setEmployeeFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [dueFilter, setDueFilter] = useState("ALL");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState(employees[0]?.id ?? "");
@@ -72,10 +75,20 @@ export default function CompanyTaskBoard({
     completed: tasks.filter((task) => task.status === "DONE").length,
   }), [tasks]);
 
-  const visibleTasks = tasks.filter((task) =>
-    (statusFilter === "ALL" || task.status === statusFilter) &&
-    (employeeFilter === "ALL" || task.assignee?.id === employeeFilter),
-  );
+  const currentDate = new Date();
+  const today = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
+  const visibleTasks = tasks.filter((task) => {
+    const query = search.trim().toLocaleLowerCase();
+    const matchesSearch = !query
+      || task.title.toLocaleLowerCase().includes(query)
+      || task.description?.toLocaleLowerCase().includes(query);
+    const overdue = task.status !== "DONE" && task.dueDate !== null && task.dueDate.slice(0, 10) < today;
+    return matchesSearch
+      && (statusFilter === "ALL" || task.status === statusFilter)
+      && (employeeFilter === "ALL" || task.assignee?.id === employeeFilter)
+      && (priorityFilter === "ALL" || task.priority === priorityFilter)
+      && (dueFilter === "ALL" || (dueFilter === "OVERDUE" ? overdue : Boolean(task.dueDate)));
+  });
 
   async function createTask(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,6 +136,30 @@ export default function CompanyTaskBoard({
       setTasks((current) => current.map((item) => item.id === task.id ? data.task! : item));
     } catch {
       setError("Unable to update task priority. Check your connection and try again.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function reassignTask(task: CompanyTask, nextAssigneeId: string) {
+    setPendingId(task.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/company-tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigneeId: nextAssigneeId || null }),
+      });
+      const data = await response.json() as { ok?: boolean; task?: CompanyTask; error?: string };
+      if (!response.ok || !data.ok || !data.task) {
+        setError(data.error || "Unable to reassign this task.");
+        return;
+      }
+      setTasks((current) => current.map((item) => item.id === task.id ? data.task! : item));
+      setNotice(nextAssigneeId ? `Task reassigned to ${employeeLabel(data.task.assignee)}.` : "Task is now unassigned.");
+    } catch {
+      setError("Unable to reassign this task. Check your connection and try again.");
     } finally {
       setPendingId(null);
     }
@@ -309,7 +346,15 @@ export default function CompanyTaskBoard({
             <h2 className="font-semibold text-white/90">{isAdmin ? "Company tasks" : "Assigned to me"}</h2>
             <p className="mt-1 text-xs text-white/40">{visibleTasks.length} {visibleTasks.length === 1 ? "task" : "tasks"}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <input
+              type="search"
+              aria-label="Search tasks"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search task title or details"
+              className="soft-input h-9 rounded-lg px-3 text-xs sm:col-span-2 lg:col-span-1"
+            />
             {isAdmin ? (
               <select aria-label="Filter by employee" value={employeeFilter} onChange={(event) => setEmployeeFilter(event.target.value)} className="soft-input h-9 rounded-lg px-2 text-xs">
                 <option value="ALL">All employees</option>
@@ -322,6 +367,17 @@ export default function CompanyTaskBoard({
               <option value="IN_PROGRESS">In progress</option>
               <option value="DONE">Completed</option>
             </select>
+            <select aria-label="Filter by priority" value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} className="soft-input h-9 rounded-lg px-2 text-xs">
+              <option value="ALL">All priorities</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Normal</option>
+              <option value="LOW">Low</option>
+            </select>
+            <select aria-label="Filter by due date" value={dueFilter} onChange={(event) => setDueFilter(event.target.value)} className="soft-input h-9 rounded-lg px-2 text-xs">
+              <option value="ALL">All due dates</option>
+              <option value="OVERDUE">Overdue only</option>
+              <option value="HAS_DUE_DATE">Has a due date</option>
+            </select>
           </div>
         </div>
 
@@ -330,7 +386,7 @@ export default function CompanyTaskBoard({
 
         {visibleTasks.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left">
+            <table className="w-full min-w-[760px] text-left">
               <thead className="text-[11px] uppercase tracking-wider text-white/35">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Task</th>
@@ -352,8 +408,33 @@ export default function CompanyTaskBoard({
                           {comments[task.id] ? ` (${comments[task.id].length})` : ""}
                         </button>
                       </td>
-                      {isAdmin ? <td className="px-4 py-4 text-sm text-white/55">{employeeLabel(task.assignee)}</td> : null}
-                      <td className="whitespace-nowrap px-4 py-4 text-sm text-white/55">{formatDueDate(task.dueDate)}</td>
+                      {isAdmin ? (
+                        <td className="px-4 py-4">
+                          <select
+                            aria-label={`Reassign ${task.title}`}
+                            value={task.assignee?.id ?? ""}
+                            onChange={(event) => void reassignTask(task, event.target.value)}
+                            disabled={pendingId === task.id}
+                            className="soft-input h-9 max-w-48 rounded-lg px-2 text-xs disabled:opacity-50"
+                          >
+                            <option value="">Unassigned</option>
+                            {task.assignee && !employees.some((employee) => employee.id === task.assignee?.id) ? (
+                              <option value={task.assignee.id}>{employeeLabel(task.assignee)} (inactive)</option>
+                            ) : null}
+                            {employees.map((employee) => (
+                              <option key={employee.id} value={employee.id}>{employeeLabel(employee)}</option>
+                            ))}
+                          </select>
+                        </td>
+                      ) : null}
+                      <td className="whitespace-nowrap px-4 py-4 text-sm text-white/55">
+                        {task.dueDate && task.status !== "DONE" && task.dueDate.slice(0, 10) < today ? (
+                          <span className="inline-flex items-center gap-2">
+                            {formatDueDate(task.dueDate)}
+                            <span className="rounded-full border border-rose-400/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold text-rose-300">Overdue</span>
+                          </span>
+                        ) : formatDueDate(task.dueDate)}
+                      </td>
                       <td className="px-4 py-4">
                         {isAdmin ? (
                           <select
