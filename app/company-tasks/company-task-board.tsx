@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
 type Employee = { id: string; name: string | null; email: string };
+type TaskComment = { id: string; content: string; createdAt: string; author: string; authorId: string };
 type CompanyTask = {
   id: string;
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -19,6 +22,11 @@ const statusLabels: Record<TaskStatus, string> = {
   TODO: "Not started",
   IN_PROGRESS: "In progress",
   DONE: "Completed",
+};
+const priorityLabels: Record<TaskPriority, string> = {
+  LOW: "Low",
+  MEDIUM: "Normal",
+  HIGH: "High",
 };
 
 function employeeLabel(employee: Employee | null) {
@@ -47,8 +55,14 @@ export default function CompanyTaskBoard({
   const [description, setDescription] = useState("");
   const [assigneeId, setAssigneeId] = useState(employees[0]?.id ?? "");
   const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [savingTask, setSavingTask] = useState(false);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<string, TaskComment[]>>({});
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -72,7 +86,7 @@ export default function CompanyTaskBoard({
       const response = await fetch("/api/company-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, assigneeId, dueDate: dueDate || null }),
+        body: JSON.stringify({ title, description, assigneeId, dueDate: dueDate || null, priority }),
       });
       const data = await response.json() as { ok?: boolean; task?: CompanyTask; error?: string };
       if (!response.ok || !data.ok || !data.task) {
@@ -83,11 +97,87 @@ export default function CompanyTaskBoard({
       setTitle("");
       setDescription("");
       setDueDate("");
+      setPriority("MEDIUM");
       setNotice("Task assigned.");
     } catch {
       setError("Unable to assign this task. Check your connection and try again.");
     } finally {
       setSavingTask(false);
+    }
+  }
+
+  async function updatePriority(task: CompanyTask, nextPriority: TaskPriority) {
+    setPendingId(task.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/company-tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: nextPriority }),
+      });
+      const data = await response.json() as { ok?: boolean; task?: CompanyTask; error?: string };
+      if (!response.ok || !data.ok || !data.task) {
+        setError(data.error || "Unable to update task priority.");
+        return;
+      }
+      setTasks((current) => current.map((item) => item.id === task.id ? data.task! : item));
+    } catch {
+      setError("Unable to update task priority. Check your connection and try again.");
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function toggleComments(taskId: string) {
+    if (expandedTaskId === taskId) {
+      setExpandedTaskId(null);
+      return;
+    }
+    setExpandedTaskId(taskId);
+    setCommentDraft("");
+    if (comments[taskId]) return;
+
+    setCommentsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/company-tasks/${taskId}/comments`, { cache: "no-store" });
+      const data = await response.json() as { ok?: boolean; comments?: TaskComment[]; error?: string };
+      if (!response.ok || !data.ok || !data.comments) {
+        setError(data.error || "Unable to load task updates.");
+        return;
+      }
+      setComments((current) => ({ ...current, [taskId]: data.comments! }));
+    } catch {
+      setError("Unable to load task updates. Check your connection and try again.");
+    } finally {
+      setCommentsLoading(false);
+    }
+  }
+
+  async function addComment(event: React.FormEvent<HTMLFormElement>, taskId: string) {
+    event.preventDefault();
+    setCommentSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/company-tasks/${taskId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: commentDraft }),
+      });
+      const data = await response.json() as { ok?: boolean; comment?: TaskComment; error?: string };
+      if (!response.ok || !data.ok || !data.comment) {
+        setError(data.error || "Unable to post this update.");
+        return;
+      }
+      setComments((current) => ({
+        ...current,
+        [taskId]: [...(current[taskId] ?? []), data.comment!],
+      }));
+      setCommentDraft("");
+    } catch {
+      setError("Unable to post this update. Check your connection and try again.");
+    } finally {
+      setCommentSubmitting(false);
     }
   }
 
@@ -181,6 +271,18 @@ export default function CompanyTaskBoard({
                   className="soft-input h-11 rounded-xl px-3 text-sm"
                 />
               </label>
+              <label className="grid gap-1.5 text-xs font-medium text-white/55">
+                Priority
+                <select
+                  value={priority}
+                  onChange={(event) => setPriority(event.target.value as TaskPriority)}
+                  className="soft-input h-11 rounded-xl px-3 text-sm"
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Normal</option>
+                  <option value="HIGH">High</option>
+                </select>
+              </label>
               <div className="sm:col-span-2">
                 <button
                   type="submit"
@@ -234,32 +336,97 @@ export default function CompanyTaskBoard({
                   <th className="px-5 py-3 font-semibold">Task</th>
                   {isAdmin ? <th className="px-4 py-3 font-semibold">Assigned to</th> : null}
                   <th className="px-4 py-3 font-semibold">Due date</th>
+                  <th className="px-4 py-3 font-semibold">Priority</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.06]">
                 {visibleTasks.map((task) => (
-                  <tr key={task.id}>
-                    <td className="max-w-[30rem] px-5 py-4">
-                      <p className="text-sm font-medium text-white/85">{task.title}</p>
-                      {task.description ? <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-white/40">{task.description}</p> : null}
-                    </td>
-                    {isAdmin ? <td className="px-4 py-4 text-sm text-white/55">{employeeLabel(task.assignee)}</td> : null}
-                    <td className="whitespace-nowrap px-4 py-4 text-sm text-white/55">{formatDueDate(task.dueDate)}</td>
-                    <td className="px-4 py-4">
-                      <select
-                        aria-label={`Status for ${task.title}`}
-                        value={task.status}
-                        onChange={(event) => void updateStatus(task, event.target.value as TaskStatus)}
-                        disabled={pendingId === task.id}
-                        className="soft-input h-9 rounded-lg px-2 text-xs disabled:opacity-50"
-                      >
-                        {(Object.keys(statusLabels) as TaskStatus[]).map((status) => (
-                          <option key={status} value={status}>{statusLabels[status]}</option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
+                  <Fragment key={task.id}>
+                    <tr>
+                      <td className="max-w-[30rem] px-5 py-4">
+                        <p className="text-sm font-medium text-white/85">{task.title}</p>
+                        {task.description ? <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-white/40">{task.description}</p> : null}
+                        <button type="button" onClick={() => void toggleComments(task.id)} className="mt-2 text-xs font-medium text-indigo-300 hover:text-indigo-200">
+                          {expandedTaskId === task.id ? "Hide updates" : "Progress updates"}
+                          {comments[task.id] ? ` (${comments[task.id].length})` : ""}
+                        </button>
+                      </td>
+                      {isAdmin ? <td className="px-4 py-4 text-sm text-white/55">{employeeLabel(task.assignee)}</td> : null}
+                      <td className="whitespace-nowrap px-4 py-4 text-sm text-white/55">{formatDueDate(task.dueDate)}</td>
+                      <td className="px-4 py-4">
+                        {isAdmin ? (
+                          <select
+                            aria-label={`Priority for ${task.title}`}
+                            value={task.priority}
+                            onChange={(event) => void updatePriority(task, event.target.value as TaskPriority)}
+                            disabled={pendingId === task.id}
+                            className="soft-input h-9 rounded-lg px-2 text-xs disabled:opacity-50"
+                          >
+                            {(Object.keys(priorityLabels) as TaskPriority[]).map((value) => (
+                              <option key={value} value={value}>{priorityLabels[value]}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`text-xs font-medium ${task.priority === "HIGH" ? "text-rose-300" : task.priority === "LOW" ? "text-white/40" : "text-white/60"}`}>
+                            {priorityLabels[task.priority]}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <select
+                          aria-label={`Status for ${task.title}`}
+                          value={task.status}
+                          onChange={(event) => void updateStatus(task, event.target.value as TaskStatus)}
+                          disabled={pendingId === task.id}
+                          className="soft-input h-9 rounded-lg px-2 text-xs disabled:opacity-50"
+                        >
+                          {(Object.keys(statusLabels) as TaskStatus[]).map((status) => (
+                            <option key={status} value={status}>{statusLabels[status]}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                    {expandedTaskId === task.id ? (
+                      <tr key={`${task.id}-comments`}>
+                        <td colSpan={isAdmin ? 5 : 4} className="bg-white/[0.025] px-5 py-4">
+                          <div className="mx-auto max-w-3xl">
+                            <h3 className="text-sm font-semibold text-white/80">Progress updates</h3>
+                            {commentsLoading ? <p className="mt-3 text-xs text-white/40">Loading updates...</p> : null}
+                            {comments[task.id]?.length ? (
+                              <div className="mt-3 grid gap-2">
+                                {comments[task.id].map((comment) => (
+                                  <article key={comment.id} className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5">
+                                    <div className="flex flex-wrap justify-between gap-2">
+                                      <p className="text-xs font-semibold text-white/70">{comment.author}</p>
+                                      <time className="text-[10px] text-white/35">{new Date(comment.createdAt).toLocaleString()}</time>
+                                    </div>
+                                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-white/55">{comment.content}</p>
+                                  </article>
+                                ))}
+                              </div>
+                            ) : !commentsLoading && comments[task.id] ? (
+                              <p className="mt-2 text-xs text-white/40">No updates yet.</p>
+                            ) : null}
+                            <form onSubmit={(event) => void addComment(event, task.id)} className="mt-3 flex flex-col gap-2 sm:flex-row">
+                              <textarea
+                                required
+                                maxLength={2000}
+                                rows={2}
+                                value={commentDraft}
+                                onChange={(event) => setCommentDraft(event.target.value)}
+                                placeholder={isAdmin ? "Add an update for the employee..." : "Share progress or explain what's blocking you..."}
+                                className="soft-input min-h-11 flex-1 rounded-xl px-3 py-2 text-sm"
+                              />
+                              <button type="submit" disabled={commentSubmitting || !commentDraft.trim()} className="secondary-button h-10 px-4 text-xs font-semibold disabled:opacity-50">
+                                {commentSubmitting ? "Posting..." : "Post update"}
+                              </button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

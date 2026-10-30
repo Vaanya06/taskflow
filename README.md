@@ -28,7 +28,7 @@ npx prisma generate
 npm run dev
 ```
 
-Regular accounts have the `USER` role and land in the company task tracker at `/company-tasks`. Employees see only tasks assigned to them and can update each task's status. Administrators land in `/admin`, where they assign tasks to employee accounts, set optional due dates, filter the company task list, and track progress. `/dashboard` forwards to the appropriate task view.
+Regular accounts have the `USER` role and land in the company task tracker at `/company-tasks`. Employees see only tasks assigned to them, update status, and add progress notes or blockers. Administrators land in `/admin`, where they assign tasks with optional due dates and priority, filter the company task list, and track progress. Employees receive an in-app notification for new assignments; task updates notify the other side. `/dashboard` forwards to the appropriate task view.
 
 The company task workflow uses a shared internal project record to store assignments; admins and employees work with a single task list rather than project or sprint screens. Existing project and team data is left untouched, but project workspaces are no longer the default company workflow. Personal to-dos remain separate at `/todos` for private or shared lists, My Day, reminders, repeating tasks, and task steps.
 

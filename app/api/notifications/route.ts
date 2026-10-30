@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accessibleProjectWhere, accessibleTaskWhere } from "@/project-access";
 import type { Prisma } from "@prisma/client";
+import { COMPANY_TASK_PROJECT_ID } from "@/services/company-tasks";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -13,11 +14,16 @@ export async function GET() {
 
   const where: Prisma.NotificationWhereInput = {
     userId: user.id,
-    project: { is: accessibleProjectWhere(user.id) },
     OR: [
-      { taskId: null },
-      { task: { is: accessibleTaskWhere(user.id) } },
-      { type: { in: [NotificationType.TASK_ASSIGNED, NotificationType.TASK_UNASSIGNED] } },
+      {
+        project: { is: accessibleProjectWhere(user.id) },
+        OR: [
+          { taskId: null },
+          { task: { is: accessibleTaskWhere(user.id) } },
+          { type: { in: [NotificationType.TASK_ASSIGNED, NotificationType.TASK_UNASSIGNED] } },
+        ],
+      },
+      { projectId: COMPANY_TASK_PROJECT_ID },
     ],
   };
   const [unreadCount, notifications] = await Promise.all([
