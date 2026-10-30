@@ -136,11 +136,12 @@ export async function getUserBySessionToken(
         id: string;
         expiresAt: Date;
         user: AuthUser;
+        userIsBlocked: boolean;
       }
     | null;
 
   try {
-    session = await prisma.session.findUnique({
+    const foundSession = await prisma.session.findUnique({
       where: {
         tokenHash,
       },
@@ -151,10 +152,24 @@ export async function getUserBySessionToken(
             email: true,
             name: true,
             role: true,
+            isBlocked: true,
           },
         },
       },
     });
+    session = foundSession
+      ? {
+          id: foundSession.id,
+          expiresAt: foundSession.expiresAt,
+          user: {
+            id: foundSession.user.id,
+            email: foundSession.user.email,
+            name: foundSession.user.name,
+            role: foundSession.user.role,
+          },
+          userIsBlocked: foundSession.user.isBlocked,
+        }
+      : null;
   } catch (error) {
     if (isDatabaseConnectionError(error)) {
       console.warn("Session lookup failed because the database connection is unavailable.");
@@ -165,6 +180,19 @@ export async function getUserBySessionToken(
   }
 
   if (!session) {
+    return null;
+  }
+
+  if (session.userIsBlocked) {
+    try {
+      await prisma.session.deleteMany({ where: { userId: session.user.id } });
+    } catch (error) {
+      if (isDatabaseConnectionError(error)) {
+        console.warn("Blocked-user session cleanup skipped because the database connection is unavailable.");
+      } else {
+        throw error;
+      }
+    }
     return null;
   }
 

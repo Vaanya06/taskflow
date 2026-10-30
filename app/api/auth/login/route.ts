@@ -58,6 +58,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (user.isBlocked) {
+      return NextResponse.json(
+        { ok: false, error: "This account has been blocked. Contact your administrator." },
+        { status: 403 },
+      );
+    }
+
     const valid = await verifyPassword(password, user.password);
     if (!valid) {
       return NextResponse.json(

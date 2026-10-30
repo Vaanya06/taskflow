@@ -16,7 +16,7 @@ export default async function AdminPage() {
     prisma.user.findMany({
       where: { role: { not: "ADMIN" } },
       orderBy: [{ name: "asc" }, { email: "asc" }],
-      select: { id: true, name: true, email: true, role: true, createdAt: true, lastSeenAt: true },
+      select: { id: true, name: true, email: true, role: true, isBlocked: true, createdAt: true, lastSeenAt: true },
     }),
     prisma.task.findMany({
       where: { projectId: COMPANY_TASK_PROJECT_ID },

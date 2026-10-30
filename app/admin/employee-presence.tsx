@@ -8,6 +8,7 @@ type Employee = {
   name: string | null;
   email: string;
   role: "USER" | "MANAGER" | "ADMIN";
+  isBlocked: boolean;
   createdAt: string;
   lastSeenAt: string | null;
 };
@@ -69,7 +70,7 @@ export default function EmployeePresence({ employees: initialEmployees }: { empl
       {error ? <p role="alert" className="mb-3 rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-200">{error} Showing the last known status.</p> : null}
       {initialEmployees.map((employee) => {
         const lastSeenAt = lastSeenById[employee.id] ?? null;
-        const online = lastSeenAt !== null && now - new Date(lastSeenAt).getTime() <= ONLINE_WINDOW_MS;
+        const online = !employee.isBlocked && lastSeenAt !== null && now - new Date(lastSeenAt).getTime() <= ONLINE_WINDOW_MS;
         return (
           <div key={employee.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
             <div className="min-w-0">
@@ -83,7 +84,13 @@ export default function EmployeePresence({ employees: initialEmployees }: { empl
                 <span className="text-white/35">{formatLastSeen(lastSeenAt, now)}</span>
               </p>
             </div>
-            <UserRoleControl userId={employee.id} role={employee.role} isCurrentUser={false} />
+            <UserRoleControl
+              userId={employee.id}
+              role={employee.role}
+              isBlocked={employee.isBlocked}
+              displayName={employee.name || employee.email}
+              isCurrentUser={false}
+            />
           </div>
         );
       })}
