@@ -59,10 +59,10 @@ const faqItems = [
 
 export default async function Home() {
   const user = await getCurrentUser();
-  const primaryHref = user ? (user.role === "ADMIN" ? "/admin" : user.role === "MANAGER" ? "/dashboard" : "/todos") : "/register";
-  const primaryLabel = user ? (user.role === "MANAGER" ? "Open projects" : "Open tasks") : "Create account";
-  const secondaryHref = user ? "/dashboard" : "/login";
-  const secondaryLabel = user ? "Open projects" : "Sign in";
+  const primaryHref = user ? (user.role === "ADMIN" ? "/admin" : "/company-tasks") : "/register";
+  const primaryLabel = user ? (user.role === "ADMIN" ? "Assign tasks" : "My assigned tasks") : "Create account";
+  const secondaryHref = user ? "/todos" : "/login";
+  const secondaryLabel = user ? "Personal tasks" : "Sign in";
 
   return (
     <main className="home-theme">

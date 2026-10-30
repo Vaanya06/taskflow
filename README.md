@@ -28,9 +28,9 @@ npx prisma generate
 npm run dev
 ```
 
-Regular accounts have the `USER` role and land in the personal task workspace at `/todos`. It includes My Day and suggestions, private or shared lists, task notes, due dates, browser reminders, repeating tasks, steps, importance, and search. Desktop reminders are delivered while ILAMED is open and browser notifications are enabled.
+Regular accounts have the `USER` role and land in the company task tracker at `/company-tasks`. Employees see only tasks assigned to them and can update each task's status. Administrators land in `/admin`, where they assign tasks to employee accounts, set optional due dates, filter the company task list, and track progress. `/dashboard` forwards to the appropriate task view.
 
-Personal to-dos and team project issues are separate records and do not sync or duplicate each other. Use personal lists for your own plans and routines; project issues have shared assignees, status, priority, and sprint context, and are managed in `/dashboard` and each project workspace. The dashboard's **My project queue** shows open project issues assigned to you and links back to their project. Completing a personal to-do does not change a project issue, and changing a project issue does not complete a personal to-do.
+The company task workflow uses a shared internal project record to store assignments; admins and employees work with a single task list rather than project or sprint screens. Existing project and team data is left untouched, but project workspaces are no longer the default company workflow. Personal to-dos remain separate at `/todos` for private or shared lists, My Day, reminders, repeating tasks, and task steps.
 
 The personal task workspace requires the `20261028131000_add_personal_todo_workspace` migration. Apply database changes and regenerate Prisma Client after pulling schema changes:
 
@@ -39,9 +39,7 @@ npx prisma migrate deploy
 npx prisma generate
 ```
 
-Company teams use the additive `20261028152000_add_company_teams` migration. Admins create teams by selecting an existing account, which grants the account the Manager role for company navigation and adds it as that team's manager. Admins can appoint a replacement manager from the team's current members. Managers can add existing accounts to their teams and connect a managed team to projects they own or belong to. Team members then gain access to those projects and can be assigned project issues. Manager access is limited to teams they manage or belong to; personal to-dos remain private and separate.
-
-The login and registration forms do not expose administrator setup. To create the first administrator, bootstrap the account through your deployment process using `ADMIN_EMAIL` and a long random `ADMIN_BOOTSTRAP_TOKEN` configured in `.env`; keep the token private and remove it from the environment after setup. Once an administrator exists, admins can promote accounts from **Admin → User access** and manage team managers. Project owners retain control over project deletion and project-level invitations; connected team members can access and work on project issues.
+The login and registration forms do not expose administrator setup. To create the first administrator, bootstrap the account through your deployment process using `ADMIN_EMAIL` and a long random `ADMIN_BOOTSTRAP_TOKEN` configured in `.env`; keep the token private and remove it from the environment after setup. Once an administrator exists, admins can manage employee access from the **Employees** section and assign tasks to non-admin accounts.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

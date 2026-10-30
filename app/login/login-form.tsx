@@ -27,7 +27,7 @@ export default function LoginForm() {
     if (response.ok) {
       const data = await response.json();
       startTransition(() => {
-        router.push(data.user?.role === "ADMIN" ? "/admin" : data.user?.role === "MANAGER" ? "/dashboard" : "/todos");
+        router.push(data.user?.role === "ADMIN" ? "/admin" : "/company-tasks");
         router.refresh();
       });
       return;
@@ -41,10 +41,10 @@ export default function LoginForm() {
     <form className="grid gap-5" onSubmit={handleSubmit}>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="badge-pill justify-center text-xs text-white/62">
-          Keep your projects in motion
+          See your assigned tasks
         </div>
         <div className="badge-pill justify-center text-xs text-white/62">
-          Pick up where the sprint left off
+          Update progress as you work
         </div>
       </div>
 
@@ -89,7 +89,7 @@ export default function LoginForm() {
       </button>
 
       <p className="text-xs leading-6 text-white/32">
-        Your dashboard, board filters, and activity feed stay synced as soon as you are back in.
+        Sign in to view the tasks assigned to you and update their progress.
       </p>
     </form>
   );

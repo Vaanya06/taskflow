@@ -12,16 +12,16 @@ type AuthFrameProps = {
 
 const previewRows = [
   {
-    title: "Launch board",
-    detail: "3 high-priority issues and a sprint goal in view.",
+    title: "Assigned tasks",
+    detail: "See what needs to be done and when it is due.",
   },
   {
-    title: "Team rhythm",
-    detail: "Comments, assignments, and deadlines stay on one surface.",
+    title: "Clear ownership",
+    detail: "Every task has one employee responsible for it.",
   },
   {
-    title: "Work pulse",
-    detail: "Quick cues help you spot overdue work before it drifts.",
+    title: "Visible progress",
+    detail: "Update task status so your administrator can follow along.",
   },
 ];
 
@@ -46,7 +46,7 @@ export function AuthFrame({
               Step back into the board with more signal and less clutter.
             </h2>
             <p className="mt-5 max-w-lg text-sm leading-7 text-white/50">
-              ILAMED keeps planning, task flow, sprint focus, and team updates on one vivid surface so work feels easier to scan at a glance.
+              ILAMED keeps assigned work, due dates, and progress easy to see in one place.
             </p>
           </div>
 
@@ -54,11 +54,11 @@ export function AuthFrame({
             <div className="panel-card-soft float-gentle rounded-[28px] p-5">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/30">
-                  Focus board
+                  Task overview
                 </p>
                 <span className="badge-pill text-[10px] font-semibold text-[var(--accent)]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] pulse-soft" />
-                  Active
+                  Current
                 </span>
               </div>
               <div className="mt-5 grid gap-3">

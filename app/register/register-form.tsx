@@ -28,7 +28,7 @@ export default function RegisterForm() {
     if (response.ok) {
       const data = await response.json();
       startTransition(() => {
-        router.push(data.user?.role === "ADMIN" ? "/admin" : data.user?.role === "MANAGER" ? "/dashboard" : "/todos");
+        router.push(data.user?.role === "ADMIN" ? "/admin" : "/company-tasks");
         router.refresh();
       });
       return;
@@ -41,9 +41,9 @@ export default function RegisterForm() {
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="badge-pill justify-center text-xs text-white/62">Projects</div>
-        <div className="badge-pill justify-center text-xs text-white/62">Sprints</div>
-        <div className="badge-pill justify-center text-xs text-white/62">Team flow</div>
+        <div className="badge-pill justify-center text-xs text-white/62">Assigned tasks</div>
+        <div className="badge-pill justify-center text-xs text-white/62">Due dates</div>
+        <div className="badge-pill justify-center text-xs text-white/62">Progress</div>
       </div>
 
       <label className="grid gap-2 text-sm font-medium text-white/48">
@@ -85,7 +85,7 @@ export default function RegisterForm() {
       </label>
 
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs leading-6 text-white/34">
-        Invite teammates later. Your first project and board are waiting as soon as the account is ready.
+        Once your account is ready, an administrator can assign tasks to you.
       </div>
 
       {error ? (

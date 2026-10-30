@@ -18,11 +18,11 @@ export function WorkspaceSwitcher({ current }: WorkspaceSwitcherProps) {
         Personal tasks
       </Link>
       <Link
-        href="/dashboard"
+        href="/company-tasks"
         aria-current={current === "projects" ? "page" : undefined}
         className={current === "projects" ? "workspace-switcher-active" : ""}
       >
-        Team projects
+        Company tasks
       </Link>
     </nav>
   );

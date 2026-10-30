@@ -7,14 +7,14 @@ import RegisterForm from "./register-form";
 export default async function RegisterPage() {
   const user = await getCurrentUser();
   if (user) {
-    redirect(user.role === "ADMIN" ? "/admin" : user.role === "MANAGER" ? "/dashboard" : "/todos");
+    redirect(user.role === "ADMIN" ? "/admin" : "/company-tasks");
   }
 
   return (
     <AuthFrame
       eyebrow="Create account"
-      title="Start a brighter workspace"
-      description="Create your account to organize projects, move work through the board, and keep sprint decisions visible from day one."
+      title="Get started"
+      description="Create your account to receive company task assignments and keep your progress up to date."
       footer={
         <p>
           Already have an account?{" "}

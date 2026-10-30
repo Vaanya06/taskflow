@@ -7,14 +7,14 @@ import LoginForm from "./login-form";
 export default async function LoginPage() {
   const user = await getCurrentUser();
   if (user) {
-    redirect(user.role === "ADMIN" ? "/admin" : user.role === "MANAGER" ? "/dashboard" : "/todos");
+    redirect(user.role === "ADMIN" ? "/admin" : "/company-tasks");
   }
 
   return (
     <AuthFrame
       eyebrow="Sign in"
-      title="Welcome back to the board"
-      description="Open your workspace, catch the current sprint pulse, and jump back into the tasks that need your attention first."
+      title="Welcome back"
+      description="See the tasks assigned to you, check due dates, and update your progress."
       footer={
         <p>
           New here?{" "}
